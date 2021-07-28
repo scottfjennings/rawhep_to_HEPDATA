@@ -128,3 +128,27 @@ out_sub_tables <- list(sub_table1 = sub_table1,
                        sub_table5 = sub_table5)
 return(out_sub_tables)
 }
+
+
+# disturbance codes
+disturbance_code_to_text <- function(dist.code.field) {
+dist.code.field = toupper(dist.code.field)
+  dist.code.field = case_when(dist.code.field == "A" ~ "Avian",
+                              dist.code.field == "H" ~ "Human",
+                              dist.code.field == "W" ~ "Weather",
+                              dist.code.field == "M" ~ "Mammal", 
+                              dist.code.field == "O" ~ "ACR field observer", 
+                              dist.code.field == "P" ~ "Unknown Predator", 
+                              dist.code.field == "U" ~ "unknown")
+  return(dist.code.field)
+}
+
+
+disturbance_response_to_text <- function(dist.response.field) {
+  dist.response.field = case_when(dist.response.field == 0 ~ "none", 
+                                  dist.response.field == 1 ~ "behavioral response", 
+                                  dist.response.field == 2 ~ "nest failure",
+                                  dist.response.field == 3 ~ "abandonment of colony", 
+                                  dist.response.field == 4 ~ "pre‐season disturbance")
+return(dist.response.field)
+  }

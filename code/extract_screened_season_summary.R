@@ -1,12 +1,15 @@
 
 
 
+# can run this entire script at once, only need to change zyear to the desired year.
+
 library(tidyverse)
 library(docxtractr)
 library(here)
 
 zyear = 2020
 seas_summ_files <- list.files(paste("season_summary_forms/", zyear, "/", sep = ""))
+
 
 
 # zcode = 599
@@ -78,7 +81,7 @@ fix_dates <- function(zdf) {
            date = as.Date(date))
 }
 
-
+#
 
 # total nests ----
 
@@ -115,9 +118,9 @@ all_total_nest_tables <- map2_df(zyear, seas_summ_files, get_total_nest_table) %
 
 
 # nest stages ----
+# the nest stages tables contain 2 different types of information: number of nests in each stage, and ROP dates. need to separate these 2 types of info, so have 1 function to extract the stage tables from the doc list, then 2 more to separate the 2 types of info
 
-
-get_nest_stage_table <- function(zyear, zfile) {
+get_nest_stage_rop_table <- function(zyear, zfile) {
 
 get_date_tables <- function(table_num) {
   nest_tab_wide <- extr_doc[[table_num]]
@@ -128,21 +131,34 @@ get_date_tables <- function(table_num) {
   
 num_stage_tables <- extr_doc[[length(extr_doc)]]$num_nest_stage_tables %>% as.numeric()
 
-
-
-
   if(num_stage_tables > 0) {
 nest_stage_tables <- seq(3 + num_stage_tables, length.out = num_stage_tables)
 
-nest_stages <- map(nest_stage_tables, get_date_tables)  %>%
+nest_stages_rop <- map(nest_stage_tables, get_date_tables)  %>%
              reduce(full_join) %>% 
-  pivot_longer(cols = contains("X"), names_to = "date") %>% 
-  pivot_wider(values_from = value, names_from = stage)
+  pivot_longer(cols = contains("X"), names_to = "date")  %>% 
+  fix_dates()
 }
 }
 
-all_nest_stage_tables <- map2_df(zyear, seas_summ_files, get_nest_stage_table) %>%
-  fix_dates()
+get_stage_nest_nums <- function(stage_rop_table) {
+  nest_stages <- stage_rop_table %>% 
+  rename(stage = variable, num.nests = value) %>% 
+  filter(stage != "rop") 
+}
+
+get_rop_dates <- function(stage_rop_table) {
+  rop <- stage_rop_table %>%
+  filter(variable == "rop", value != "other") %>% 
+    select(year, code, species, date, rop = value)
+}
+
+
+all_stage_nest_nums <- map2_df(zyear, seas_summ_files, get_nest_stage_rop_table) %>%
+  get_stage_nest_nums()
+
+all_rop_dates <- map2_df(zyear, seas_summ_files, get_nest_stage_rop_table) %>%
+  get_rop_dates()
 
 
 
@@ -151,7 +167,7 @@ get_stage4brd <- function(zyear, zfile) {
 if(grepl("GREG|GBHE", zfile)){
     doc <- read_docx(paste("season_summary_forms/", zyear, "/", zfile, sep = ""))
   extr_doc <- docx_extract_all_tbls(doc)
-  stage4brd <- extr_doc[[length(extr_doc) - 2]]
+  stage4brd <- extr_doc[[length(extr_doc) - 4]]
   stage4brd <- stage4brd
 }
 }
@@ -159,25 +175,34 @@ if(grepl("GREG|GBHE", zfile)){
 all_stage4brd <- map2_df(zyear, seas_summ_files, get_stage4brd) 
 #
 
+# disturbance ----
+ get_disturbance <- function(zyear, zfile) {
+  doc <- read_docx(paste("season_summary_forms/", zyear, "/", zfile, sep = ""))
+  extr_doc <- docx_extract_all_tbls(doc)
+  disturbance <- extr_doc[[length(extr_doc) - 3]]
+}
+
+all_disturbance <- map2_df(zyear, seas_summ_files, get_disturbance) %>% 
+  distinct() # should be duplicated for each species, distinct will remove dups
+  
 # predators ----
 get_predators <- function(zyear, zfile) {
   doc <- read_docx(paste("season_summary_forms/", zyear, "/", zfile, sep = ""))
   extr_doc <- docx_extract_all_tbls(doc)
-  predators <- extr_doc[[length(extr_doc)]]
+  predators <- extr_doc[[length(extr_doc)-2]]
 }
 
 all_predators <- map2_df(zyear, seas_summ_files, get_predators) %>% 
   distinct() # should be duplicated for each species, distinct will remove dups
   
-
-# disturbance ----
- get_disturbance <- function(zyear, zfile) {
+# notes ----
+get_notes <- function(zyear, zfile) {
   doc <- read_docx(paste("season_summary_forms/", zyear, "/", zfile, sep = ""))
   extr_doc <- docx_extract_all_tbls(doc)
-  disturbance <- extr_doc[[length(extr_doc) - 1]]
+  notes <- extr_doc[[length(extr_doc)-1]]
 }
 
-all_disturbance <- map2_df(zyear, seas_summ_files, get_disturbance) %>% 
+all_notes <- map2_df(zyear, seas_summ_files, get_notes) %>% 
   distinct() # should be duplicated for each species, distinct will remove dups
   
 
@@ -186,10 +211,12 @@ all_disturbance <- map2_df(zyear, seas_summ_files, get_disturbance) %>%
 screened_s123 <- list(screen_log = all_screening_log,
                       effort_summary = all_effort_summary,
                       total_nests = all_total_nest_tables,
-                      nest_stages = all_nest_stage_tables,
+                      nest_stages = all_stage_nest_nums,
+                      rop_dates = all_rop_dates,
                       brood_sizes = all_stage4brd,
                       predators = all_predators,
-                      disturbance = all_disturbance)
+                      disturbance = all_disturbance,
+                      notes = all_notes)
 
 saveRDS(screened_s123, paste("data/screened/screened_s123_", zyear))
  

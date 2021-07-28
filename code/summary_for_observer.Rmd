@@ -1,9 +1,9 @@
 ---
 title: ""
 output:
-  word_document: default
   html_document:
     df_print: paged
+  word_document: default
   pdf_document: default
 ---
 
@@ -50,7 +50,9 @@ zspp = "GREG"
 
 #hep_total_nests <- readRDS("C:/Users/scott.jennings/Documents/Projects/HEP/HEP_data_work/HEP_data/hep_nest_abundance") %>%   filter(code == zcode, species == zspp)
 
-hep_total_nests <- readRDS(here("data/test_nest_abund")) %>% filter(code == zcode, species == zspp)
+hep_total_nests <- readRDS(here("data/test_nest_abund")) %>% filter(code == zcode, species == zspp) %>% ungroup()
+
+mean_historic_abund <- mean(hep_total_nests$peakactvnsts)
 
 spp_name = case_when(zspp == "GREG" ~ "Great Egret",
                      zspp == "GBHE" ~ "Great Blue Heron",
@@ -190,18 +192,6 @@ nest_totals$sub_table5 %>%
 }
 ```
 
-```{r}
-hep_total_nests %>%  
-  ggplot() + 
-  geom_point(aes(x = year, y = peakactvnsts)) + 
-  stat_smooth(aes(x = year, y = peakactvnsts), color = "black", se = FALSE, method = "lm", formula = y~1) +
-  geom_point(data = curr_year_peakactvnsts, aes(x = year, y = peakactvnsts), color = "red") +
-  theme_classic() +
-  ylab("Total nests") +
-  xlab("Year")
-
-
-```
 
 <br>
 Number of `r spp_name` nests at each stage
@@ -242,6 +232,8 @@ nest_stages <- nest_stages_df %>%
 ```
 <br>
 
+
+
 ```{r}
 if(zspp %in% c("GREG", "GBHE")) {
 nest_stages$sub_table1 %>% 
@@ -250,26 +242,38 @@ nest_stages$sub_table1 %>%
 ```
 <br>
 ```{r}
-if(zspp %in% c("GREG", "GBHE") & !is.null(nest_stages$sub_table2)) {
-nest_stages$sub_table2
+if(zspp %in% c("GREG", "GBHE")) {
+  if(!is.null(nest_stages$sub_table2)) {
+nest_stages$sub_table2 %>% 
+    set_header_labels(variable = "Nest stage")
+  }
 }
 ```
 <br>
 ```{r}
-if(zspp %in% c("GREG", "GBHE") & !is.null(nest_stages$sub_table3)) {
-nest_stages$sub_table3
+if(zspp %in% c("GREG", "GBHE")) {
+  if(!is.null(nest_stages$sub_table3)) {
+nest_stages$sub_table3 %>% 
+    set_header_labels(variable = "Nest stage")
+  }
   }
 ```
 <br>
 ```{r}
-if(zspp %in% c("GREG", "GBHE") & !is.null(nest_stages$sub_table4)) {
-nest_stages$sub_table4
+if(zspp %in% c("GREG", "GBHE")) {
+  if(!is.null(nest_stages$sub_table4)) {
+nest_stages$sub_table4 %>% 
+    set_header_labels(variable = "Nest stage")
+  }
 }
 ```
 <br>
 ```{r}
-if(zspp %in% c("GREG", "GBHE") & !is.null(nest_stages$sub_table5)) {
-nest_stages$sub_table5
+if(zspp %in% c("GREG", "GBHE")) {
+  if(!is.null(nest_stages$sub_table5)) {
+nest_stages$sub_table5 %>% 
+    set_header_labels(variable = "Nest stage")
+  }
 }
 ```
 <br>
@@ -282,25 +286,26 @@ first_stage5_date <- wrangled_s123$stages %>%
   filter(stage == 5, num.nests > 0) %>% 
   filter(date == min(date)) %>% 
   select(code, species, date)
+
 if(nrow(first_stage5_date) == 0) {
   first_stage5_date = data.frame(code = zcode,
                                  species = zspp,
                                  date = NA)
 }
 
-brood_sizes <- wrangled_s123$brood.sizes %>% 
-  filter(code == zcode, species == zspp) %>% 
-  group_by(date) %>% 
-  mutate(max.num.nest = max(num.nests)) %>% 
-  ungroup() %>% 
-  filter(max.num.nest > 0) %>% 
-  select(-max.num.nest)
+
 
 
 
 
 if(zspp %in% c("GREG", "GBHE")) {
-  
+ brood_sizes <- wrangled_s123$brood.sizes %>% 
+  filter(code == zcode, species == zspp) %>% 
+  group_by(date) %>% 
+  mutate(max.num.nest = max(num.nests)) %>% 
+  ungroup() %>% 
+  filter(max.num.nest > 0) %>% 
+  select(-max.num.nest) 
 if(nrow(brood_sizes) > 0) {
 brood_sizes_wide <- brood_sizes %>% 
   mutate(brd = paste("brd.", brd, sep = ""),
@@ -335,23 +340,26 @@ if(zspp %in% c("GREG", "GBHE")) {
   colnames(brood_sizes_wide) <- gsub("brd.", "", colnames(brood_sizes_wide)) 
 flextable(brood_sizes_wide) %>% 
   border_remove() %>% 
-  add_header_row(values = c("", "Number of nests with brood size:"), colwidths = c(1, 5)) %>% 
+  add_header_row(values = c("", "Number of stage 4 nests with brood size:"), colwidths = c(1, 5)) %>% 
   align(j = c(2:6), align = "center", part = "all") %>% 
   autofit() %>% 
     width(j = 2:6, width = 0.5) %>% 
-  border(border.top = fp_border(), part = "all") %>% 
-  border(border.bottom = fp_border(), part = "header", j = 2:6) %>% 
+  border(border.top = fp_border(), part = "header") %>% 
+  border(border.bottom = fp_border(), part = "header", i = 1, j = 2:6) %>% 
+  border(border.bottom = fp_border(), part = "header", i = 2) %>% 
   border(i = nrow(brood_sizes_wide), border.bottom = fp_border(), part = "body")
 }
 ```
-note: only dates with at least 1 stage 4 nest are shown 
+
 
 ```{r}
 # disturbance
 disturbance <- wrangled_s123$disturbance %>% 
   filter(code == zcode) %>% 
-  mutate(year = year(as.Date(date))) %>% 
-  select(year, code, date, observed.inferred = obs.inf, description = details, type = source, result)
+  mutate(year = year(as.Date(date)),
+         source = disturbance_code_to_text(source),
+         result = disturbance_response_to_text(result)) %>% 
+  select(date, source, result, description = details)
 
 ```
 <br>
@@ -380,8 +388,10 @@ predators_longer <- predators %>%
 predators_rewide <- predators_longer %>% 
   mutate(yup = 1) %>% 
   pivot_wider(id_cols = c(predator.species, code), names_from = pres.nest, values_from = yup) %>% 
-  mutate(year = zyear) %>% 
-  select(year, code, everything())
+  mutate(year = zyear,
+         present = ifelse(present == 1, "yes", "no"),
+         nesting = ifelse(nesting == 1, "yes", "no")) %>% 
+  select(-year, -code)
 
 ```
 <br> 
@@ -393,3 +403,20 @@ flextable(predators_rewide) %>%
 ```
 
 
+<br>
+Historic `r spp_name` nest abundance. Red point is this year's nest abundance.  
+
+```{r}
+hep_total_nests %>%  
+  ggplot() + 
+  geom_point(aes(x = year, y = peakactvnsts)) + 
+  #stat_smooth(aes(x = year, y = peakactvnsts), color = "black", se = FALSE, method = "lm", formula = y ~ 1) +
+  #stat_smooth(aes(x = year, y = peakactvnsts), color = "black", se = FALSE, method = "lm") +
+  stat_smooth(aes(x = year, y = peakactvnsts), color = "black", se = FALSE, span = 1) +
+  geom_point(data = curr_year_peakactvnsts, aes(x = year, y = peakactvnsts), color = "red") +
+  theme_classic() +
+  ylab("Total nests") +
+  xlab("Year")
+
+
+```

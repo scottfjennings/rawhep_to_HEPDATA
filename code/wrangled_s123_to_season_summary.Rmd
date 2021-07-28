@@ -24,7 +24,7 @@ library(flextable)
 library(officer)
 library(here)
 library(knitr)
-source(here("code/append_species_not_nesting.r"))
+#source(here("code/append_species_not_nesting.r")) maybe not needed
 options(scipen = 999)
 lead.col.width = c(0.5, 0.6, 0.75)
 date.col.width = 0.6
@@ -45,8 +45,8 @@ wrangled_s123 <- readRDS(here(paste("data/wrangled/wrangled_s123", zyear, sep = 
 
 # step 3: input the colony code and species you want to generate a season summary sheet for
 
-zcode = "599"
-zspp = "GREG"
+zcode = "53"
+zspp = "DCCO"
 
 
 # step 4: check if the species nested in the selected colony and year; if not, do not need to create season summary sheet.
@@ -436,6 +436,11 @@ nest_stages$sub_table5
 
 ```{r}
 # stage 4 brood sizes
+
+
+
+
+if(zspp %in% c("GREG", "GBHE")) {
 first_stage5_date <- wrangled_s123$stages %>% 
   filter(code == zcode, species == zspp) %>%
   filter(stage == 5, num.nests > 0) %>% 
@@ -458,11 +463,6 @@ brood_sizes <- wrangled_s123$brood.sizes %>%
   mutate(temp.max.date = max(date),
          stg4.date = ifelse(stage5.nests == FALSE & date == temp.max.date, TRUE, FALSE)) %>% 
   select(-max.num.nest, -temp.max.date)  
-
-
-
-
-if(zspp %in% c("GREG", "GBHE")) {
   
 if(nrow(brood_sizes) > 0) {
 brood_sizes_wide <- brood_sizes %>% 

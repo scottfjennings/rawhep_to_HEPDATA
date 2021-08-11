@@ -1,0 +1,542 @@
+---
+title: "Heron and Egret Project Season Summary Form"
+output:
+  word_document:
+params:
+  zyear: 2020
+  zcode: 599
+  zspp: "GREG"
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+
+
+```
+
+
+```{r}
+
+library(tidyverse)
+library(lubridate)
+library(RColorBrewer)
+library(rhandsontable)
+library(flextable)
+library(officer)
+library(here)
+library(knitr)
+
+options(scipen = 999)
+
+# some options for table column widths; probably won't need to change these
+lead.col.width = c(0.5, 0.7, 1)
+date.col.width = 0.6
+
+```
+
+```{r}
+# step 1: input the year you are working with and read in the wrangled Survey123 data
+# zyear = 2020
+wrangled_s123 <- readRDS(here(paste("data/wrangled/wrangled_s123", zyear, sep = "_")))
+
+
+
+# step 2: check which season summary sheets have already been created
+# readRDS(here(paste("season_summary_forms/sheet_creation_logs/sheet_creation_log_", zyear, sep = ""))) %>% view()
+
+
+
+# step 3: input the colony code and species you want to generate a season summary sheet for
+
+# zcode = 599
+# zspp = "GREG"
+
+
+# step 4: check if the species nested in the selected colony and year; if not, do not need to create season summary sheet.
+# wrangled_s123$nests %>% filter(species == zspp, code == zcode) %>% summarize(max(total.nests))
+
+
+# if this value is > 0, can click knit above and the season summary sheet will be generated
+# if this value = 0, append the didn't nest list:
+if(wrangled_s123$nests %>% filter(species == zspp, code == zcode) %>% summarize(max(total.nests)) == 0) {
+  knit_exit()
+}
+
+```
+
+
+```{r}
+
+# create a log of when this season summary sheet was created
+if(file.exists(here(paste("season_summary_forms/sheet_creation_logs/sheet_creation_log_", zyear, sep = "")))) {
+readRDS(here(paste("season_summary_forms/sheet_creation_logs/sheet_creation_log_", zyear, sep = ""))) %>% 
+  rbind(data.frame(year = zyear,
+                   code = zcode,
+                   species = zspp,
+                   date.sheet.created = Sys.time())) %>% 
+    group_by(year, code, species) %>% 
+    filter(date.sheet.created == max(date.sheet.created)) %>% 
+  saveRDS(here(paste("season_summary_forms/sheet_creation_logs/sheet_creation_log_", zyear, sep = "")))
+} else {
+  data.frame(year = zyear,
+             code = zcode,
+             species = zspp,
+             date.sheet.created = Sys.time()) %>% 
+  saveRDS(here(paste("season_summary_forms/sheet_creation_logs/sheet_creation_log_", zyear, sep = "")))
+}
+
+```
+
+
+```{r}
+
+# define  2 functions used only here
+
+# split tables with many date columns into multiple tables for better display in Season Summary .doc files
+# for tables with m number of lead columns and n number of columns representing the dates surveys were done on, split the date columns into groups of num_dates_per_split, and create multiple sub-tables as the concatenation of the same lead columns and each successive group of date columns 
+
+date_table_splitter <- function(ztable, num_dates_per_split = 6) {
+num.splits <- ceiling((ncol(ztable) - 3) / num_dates_per_split)
+seq.splits <- seq(1, num.splits)
+col.splits <- 3 + (num_dates_per_split * seq.splits)
+lead.cols <- c(1:3)
+ztable1_cols <- c(lead.cols, 4:col.splits[1])
+
+make_date_flextable <- function(date_subtable) {
+  out_date_flextable <- date_subtable %>%
+    flextable() %>%
+  autofit() %>% 
+  fit_to_width(max_width = 8.5) %>% 
+  width(j = 1:3, width = lead.col.width) %>% 
+  width(j = 4:ncol(date_subtable), width = date.col.width)
+return(out_date_flextable)
+  }
+
+# define sub-table 1 columns
+  if(ncol(ztable) <= col.splits[1]){
+sub_table1 <- ztable[,c(1:ncol(ztable))]
+  }  
+  if(ncol(ztable) > col.splits[1]){
+sub_table1 <- ztable[,c(1:col.splits[1])]
+}
+
+# define sub-table 2 columns
+if(length(col.splits) > 1){
+if(ncol(ztable) > col.splits[1]) {
+  if(ncol(ztable) <= col.splits[2]){
+sub_table2 <- ztable[,c(lead.cols, (col.splits[1]+1):ncol(ztable))]
+  }  
+  if(ncol(ztable) > col.splits[2]){
+sub_table2 <- ztable[,c(lead.cols, (col.splits[1]+1):col.splits[2])]
+}
+}
+}
+# define sub-table 3 columns
+if(length(col.splits) > 2) {
+if(ncol(ztable) > col.splits[2]) {
+  if(ncol(ztable) <= col.splits[3]){
+sub_table3 <- ztable[,c(lead.cols, (col.splits[2]+1):ncol(ztable))]
+  }  
+  if(ncol(ztable) > col.splits[3]){
+sub_table3 <- ztable[,c(lead.cols, (col.splits[2]+1):col.splits[3])]
+}
+}
+}
+# define sub-table 4 columns
+if(length(col.splits) > 3) {
+if(ncol(ztable) > col.splits[3]) {
+  if(ncol(ztable) <= col.splits[4]){
+sub_table4 <- ztable[,c(lead.cols, (col.splits[3]+1):ncol(ztable))]
+  }  
+  if(ncol(ztable) > col.splits[4]){
+sub_table4 <- ztable[,c(lead.cols, (col.splits[3]+1):col.splits[4])]
+}
+}
+}
+# define sub-table 5 columns
+if(length(col.splits) > 4) {
+if(ncol(ztable) > col.splits[4]) {
+  if(ncol(ztable) <= col.splits[5]){
+sub_table5 <- ztable[,c(lead.cols, (col.splits[4]+1):ncol(ztable))] %>% 
+  make_date_flextable()
+  }  
+  if(ncol(ztable) > col.splits[5]){
+sub_table5 <- ztable[,c(lead.cols, (col.splits[4]+1):col.splits[5])] %>% 
+  make_date_flextable()
+}
+} 
+}
+
+#--- make sub table 1
+if(exists("sub_table1")) {
+sub_table1 <- sub_table1 %>% 
+  make_date_flextable() 
+} else {
+  sub_table1 <- NULL
+}
+#--- make sub table 2
+if(exists("sub_table2")) {
+sub_table2 <- sub_table2 %>% 
+  make_date_flextable() 
+} else {
+  sub_table2 <- NULL
+}
+#--- make sub table 3
+if(exists("sub_table3")) {
+sub_table3 <- sub_table3 %>% 
+  make_date_flextable()
+} else {
+  sub_table3 <- NULL
+}
+#--- make sub table 4
+if(exists("sub_table4")) {
+sub_table4 <- sub_table4 %>% 
+  make_date_flextable()
+} else {
+  sub_table4 <- NULL
+}
+#--- make sub table 5
+if(exists("sub_table5")) {
+  sub_table5 <- sub_table5 %>% 
+  make_date_flextable()
+} else {
+  sub_table5 <- NULL
+}
+
+out_sub_tables <- list(sub_table1 = sub_table1,
+                       sub_table2 = sub_table2,
+                       sub_table3 = sub_table3,
+                       sub_table4 = sub_table4,
+                       sub_table5 = sub_table5)
+return(out_sub_tables)
+}
+
+
+
+# convert date to month-day
+date2monthday <- function(df) {
+  df <- df %>% 
+  mutate(date = as.character(date),
+         date = gsub(paste(zyear, "-", sep = ""), "", date),
+         date = ifelse(multiple.survey.num > 1, paste(date, multiple.survey.num, sep = "."), date))
+}
+
+
+```
+
+
+```{r}
+# make a blank table to record screener initials
+
+screeners <- data.frame(year = zyear,
+                        code = zcode,
+                        species = zspp,
+                        screener.1 = "not screened",
+                        screener.2 = "not screened",
+                        screening.notes = "")
+
+```
+\fontsize{12}{22}
+Screener initials:
+```{r ft.align="left"}
+flextable(screeners) %>% 
+  width(j = 1:3, width = lead.col.width) %>% 
+  width(j = 4:5, width = 1) %>% 
+  width(j = 6, width = 3)
+```
+
+
+<br>
+```{r}
+# make colony/effort summary box
+
+observers.effort <- wrangled_s123$observers.effort %>% 
+  filter(code == zcode) %>% 
+  mutate(species = zspp) %>% 
+  select(code, species, colony, everything())
+
+
+```
+
+```{r}
+flextable(observers.effort) %>% 
+  fit_to_width(max_width = 8.5) %>% 
+  width(width = c(0.5, 1, 1, 1, 1, 1, 1))
+
+```
+ *indicates recording observer
+
+<br>
+
+```{r}
+
+
+# total nests  
+total.nests <- wrangled_s123$nests %>% 
+  filter(code == zcode, species == zspp) %>% 
+  select(species, date, multiple.survey.num, total.nests) %>%  
+  arrange(date) %>% 
+  date2monthday() %>% 
+  select(-multiple.survey.num) %>% 
+  pivot_wider(values_from = total.nests, names_from = date) %>% 
+  mutate(variable = "total.nests") %>% 
+  select(variable, everything())
+
+peak_active <- wrangled_s123$nests %>% 
+  filter(code == zcode, species == zspp) %>% 
+  select(species, date, multiple.survey.num, peak.active)  %>% 
+  arrange(date) %>% 
+  date2monthday() %>% 
+  select(-multiple.survey.num) %>% 
+  pivot_wider(values_from = peak.active, names_from = date) %>% 
+  mutate(variable = "peak.active") %>% 
+  select(variable, everything())
+  
+
+obs_initials <- wrangled_s123$nests %>% 
+  filter(code == zcode, species == zspp) %>% 
+  select(species, date, multiple.survey.num, obs.initials) %>%  
+  arrange(date) %>% 
+  date2monthday() %>% 
+  select(-multiple.survey.num) %>% 
+  pivot_wider(values_from = obs.initials, names_from = date) %>% 
+  mutate(variable = "obs.initials") %>% 
+  select(variable, everything())
+
+
+
+nest_totals_df <- rbind(total.nests, peak_active, obs_initials) %>% 
+  mutate(code = zcode) %>% 
+  select(code, species, everything())
+    
+```
+<br>
+Total nests - note "code" is the colony specific code number
+```{r}
+nest_totals <- date_table_splitter(nest_totals_df)
+```
+
+```{r}
+nest_totals$sub_table1 
+```
+<br>
+```{r}
+nest_totals$sub_table2 
+```
+<br>
+```{r}
+nest_totals$sub_table3
+```
+<br>
+```{r}
+nest_totals$sub_table4
+```
+<br>
+```{r}
+nest_totals$sub_table5
+```
+
+
+
+<br>
+Number of nests at each stage
+```{r}
+
+if(zspp %in% c("GREG", "GBHE")) {
+nest_stages_df <- wrangled_s123$stages %>% 
+  filter(code == zcode, species == zspp) %>% 
+  mutate(stage = paste("stage", stage, sep = ".")) %>% 
+  arrange(date) %>%
+  date2monthday() %>%  
+  mutate(num.nests = as.character(num.nests)) %>% 
+  select(-multiple.survey.num) %>% 
+  pivot_wider(id_cols = stage, names_from = date, values_from = num.nests) %>% 
+  mutate(code = zcode,
+         species = zspp) %>% 
+  rename(variable = stage)
+
+
+rop <- wrangled_s123$stages %>% 
+  filter(code == zcode, species == zspp) %>%  
+  distinct(code, multiple.survey.num, date, species, which.rop) %>%
+  arrange(date) %>%
+  date2monthday() %>%  
+  pivot_wider(id_cols = c(code, species), names_from = date, values_from = which.rop) %>% 
+  mutate(code = zcode,
+         species = zspp,
+         variable = "which.rop")
+
+nest_stages_df <- full_join(nest_stages_df, rop) %>% 
+  select(code, species, everything())
+
+
+}
+```
+
+```{r}
+if(zspp %in% c("GREG", "GBHE")) {
+nest_stages <- date_table_splitter(nest_stages_df)
+} else {
+print(paste("No nest stage data for", zspp))
+}
+```
+<br>
+
+```{r}
+if(zspp %in% c("GREG", "GBHE")) {
+nest_stages$sub_table1
+}
+```
+<br>
+```{r}
+if(zspp %in% c("GREG", "GBHE")) {
+nest_stages$sub_table2
+}
+```
+<br>
+```{r}
+if(zspp %in% c("GREG", "GBHE")) {
+nest_stages$sub_table3
+}
+```
+<br>
+```{r}
+if(zspp %in% c("GREG", "GBHE")) {
+nest_stages$sub_table4
+}
+```
+<br>
+```{r}
+if(zspp %in% c("GREG", "GBHE")) {
+nest_stages$sub_table5
+}
+```
+<br>
+<br>
+
+Stage 4 brood size date selection.
+```{r}
+# stage 4 brood sizes
+
+
+
+if(zspp %in% c("GREG", "GBHE")) {
+
+brood_sizes <- wrangled_s123$brood.sizes %>% 
+  filter(code == zcode, species == zspp)  %>% 
+  group_by(date) %>% 
+  mutate(max.num.nest = max(num.nests)) %>% 
+  ungroup() %>% 
+  filter(max.num.nest > 0)
+  
+if(nrow(brood_sizes) > 0) {
+brood_sizes_wide <- brood_sizes %>% 
+  mutate(brd = paste("brd.", brd, sep = "")) %>% 
+  mutate(date = as.character(date),
+         date = ifelse(multiple.survey.num > 1, paste(date, multiple.survey.num, sep = "."), date)) %>% 
+  select(-multiple.survey.num) %>% 
+  pivot_wider(values_from = num.nests, names_from = brd) %>% 
+  select(code, species, date, everything(), -max.num.nest) %>% 
+  arrange(date)
+} else {
+  brood_sizes_wide <- data.frame(code = zcode,
+                                 species = zspp,
+                                 brd.date = NA,
+                                 brd.1 = NA,
+                                 brd.2 = NA,
+                                 brd.3 = NA,
+                                 brd.4 = NA,
+                                 brd.5 = NA)
+}
+}
+```
+<br>
+
+```{r}
+if(zspp %in% c("GREG", "GBHE")) {
+flextable(brood_sizes_wide) %>% 
+  autofit() %>% 
+    width(c(1, 6:ncol(brood_sizes_wide)), width = 0.5)
+} else {
+print(paste("No stage 4 brood sizes for", zspp))
+}
+```
+note: only dates with at least 1 stage 4 nest are shown 
+
+```{r}
+# disturbance
+disturbance <- wrangled_s123$disturbance %>% 
+  filter(code == zcode, species == zspp) %>%  
+  select(code, species, date, observed.inferred = obs.inf, description, type, result)
+
+```
+<br>
+Disturbance to colony
+```{r}
+flextable(disturbance) %>% 
+  autofit() %>% 
+  width(5, width = 3) %>% 
+  fit_to_width(max_width = 8.5)
+```
+
+
+```{r}
+# predators
+predators <- wrangled_s123$predators %>% 
+  filter(code == zcode, species == zspp)
+
+```
+<br> 
+Nest predatory species
+```{r}
+flextable(predators) %>% 
+  autofit()
+
+```
+
+<br>
+```{r}
+
+notes <- wrangled_s123$notes %>% 
+  filter(code == zcode, species == zspp) %>%  
+  mutate(date = as.character(date),
+         date = ifelse(multiple.survey.num > 1, paste(date, multiple.survey.num, sep = "."), date)) %>% 
+  select(-multiple.survey.num) %>% 
+  rbind(., data.frame(code = zcode,
+                      date = NA,
+                      species = zspp,
+                      note.type = "for.HEPDATA",
+                      notes = "")) 
+
+```
+
+<br> 
+Notes
+```{r}
+flextable(notes) %>% 
+  width(1, width = .5) %>% 
+  width(2:4, width = 1) %>% 
+  width(5, width = 4) %>% 
+  valign(valign = "top")
+
+```
+
+<br>
+Season Summary stat sheet - DO NOT EDIT
+
+```{r}
+seas_summary_stat_sheet <- data.frame(num_total_nest_tables = length(nest_totals[-which(sapply(nest_totals, is.null))]),
+                                      num_nest_stage_tables = ifelse(exists("nest_stages"), 
+                                                                            length(nest_stages[-which(sapply(nest_stages, is.null))]),
+                                                                            0))
+
+
+```
+
+```{r}
+flextable(seas_summary_stat_sheet) %>% 
+  autofit()
+
+```
+

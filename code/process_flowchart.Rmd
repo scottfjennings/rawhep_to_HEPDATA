@@ -1,0 +1,48 @@
+---
+title: "Survey123_to_HEPDATA_flowchart"
+author: ''
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+params:
+  output_dir: ..
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+```
+
+
+```{r }
+
+DiagrammeR::grViz("digraph {
+  graph [layout = dot, rankdir = TB, nodesep = 1, ranksep = 2]
+  
+  
+  node [shape = folder, style = filled, fillcolor = Beige, fontsize = 100] 
+  cir1 [label = 'Object 1. Survey123 data downloaded from webpage\n*saved as data/downloaded/HEP_[year]_[version number]']
+  cir2 [label = 'Object 2. list of dataframes, each containing like data\n*saved as data/wrangled/wrangled_s123_[year]']
+  cir3 [label = 'Object 3. Season Summary Sheets as .docx files\n*saved to season_summary_forms/[year]/[colony code]_[year]_[species code]']
+  cir4 [label = 'Object 4. Season Summary Sheets edited with screening changes as .docx files\n*change file name to season_summary_forms/[year]/[colony code]_[year]_[species code]_screened1 or screened2,\nwith final number reflecting number of times sheet screened']
+  cir5 [label = 'Object 5. list of dataframes, each containing like data\n*saved as data/screened/screened_s123_[year]']
+  cir6 [label = 'Object 6. list of dataframes with unique records of objects 2 and 4\n*save output as data/track_changes/track_changes_s123_[year]']
+  cir7 [label = 'Object 7. Screened data in HEPDATA format\n*save as data/as_HEPDATA/as_HEPDATA_[year]']
+  
+  node [shape = rectangle, style = filled, fillcolor = DeepSkyBlue1, fontsize = 100]        
+  rec1 [label = 'Step 1. wrangle Survey123 data\n*fix field names\n*fix date fields\n*separate like data types']
+  rec2 [label = 'Step 2. output Season Summary Sheet\n*separate sheet for each colony X species combination with at least 1 nest']
+  rec3 [label =  'Step 3. Manually screen each Season Summary Sheet']
+  rec4 [label = 'Step 4. Extract screened data from Season Summary Sheets\n*reshape to list of dataframes with same structure as output of step 1']
+  rec5 [label = 'Step 5. Generate log of screening changes\n*join output of step 1 and step 4\n*identify records that exist in step 4 output but not step 1 output as those that were changed during screening']
+  rec6 [label = 'Step 6. Convert screened data to HEPDATA format\n*convert back to a single, wide dataframe\n*change names to match HEPDATA']
+  
+  # edge definitions with the node IDs
+  edge [penwidth = 30, arrowtype = none]
+  cir1 -> rec1 -> cir2 -> rec2 -> cir3 -> rec3 -> cir4 -> rec4 -> cir5 -> rec5 -> cir6 -> rec6 -> cir7
+  }",
+  height = 1000,
+  width = 1000)
+  
+
+```

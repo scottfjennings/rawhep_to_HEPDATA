@@ -175,6 +175,10 @@ observers_effort <- full_join(seas_summary_observers, effort) %>%
 
 
 # dates ----
+
+dates <- s123 %>% 
+  select(date, code, multiple.survey.num, start, end, num.surveys.this.date)
+
 # determine which ROP each survey date belongs to
 rop_dates <- read.csv("data/rop_dates.csv") %>% 
   filter(year == zyear) %>% 
@@ -392,13 +396,14 @@ wide_notes <- s123 %>%
 # sites file created with https://github.com/scottfjennings/HEP_data_work/blob/master/HEP_code/HEP_utility_functions.R
 # and copied manually to s123 directory
 
-wrangled_s123 <- list(observers.effort = observers_effort,
-     nests = total_nests,
-     stages = bird_stages,
-     brood.sizes = bird_brood_sizes,
-     predators = predators_rewide,
-     disturbance = disturbance_rewide,
-     notes = notes)
-}
+wrangled_s123 <- list(dates = dates,
+                      observers.effort = observers_effort,
+                      nests = total_nests,
+                      stages = bird_stages,
+                      brood.sizes = bird_brood_sizes,
+                      predators = predators_rewide,
+                      disturbance = disturbance_rewide,
+                      notes = notes)
+ }
 
 #wrangled_s123 %>% saveRDS(paste("data/wrangled/wrangled_s123", zyear, sep = "_"))

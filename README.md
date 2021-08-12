@@ -1,7 +1,4 @@
-Survey123\_to\_HEPDATA vignette
-================
-Scott Jennings
-8/11/2021
+README
 
 # Survey123\_to\_HEPDATA
 

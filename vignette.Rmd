@@ -1,0 +1,268 @@
+---
+title: "How to process data from Survey123 to HEPDATA"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+This document describes the workflow for processing data from Survey123 to HEPDATA format. It begins assuming you have downloaded a .csv of the current year's Survey123 data and saved it as data/downloaded/HEP_[year]_[version number].csv, where the version number represents new versions created through proofing directly in Survey123.
+
+Processing the data from Survey123 to HEPDATA is comprised of 6 steps:  
+
+1. Wrangle Survey123 data to usable format   
+2. Output Season Summary Sheet    
+3. Manually screen each Season Summary Sheet
+4. Extract screened data from Season Summary Sheets
+5. Generate log of screening changes
+6. Convert screened data to HEPDATA format
+
+Each of these steps involves multiple sub-steps, and each major step has its own code file where the functions and processes for each sub-step are defined. Users should not need to access or open the major step code files. Rather, the functions defined in these files should be called in a separate script. The file Survey123_to_HEPDATA_workflow.R provides the recommended script, and this vignette has instructions and additional information to proceed through the entire workflow. 
+
+# Setup: load the required packages, source the utility functions code file, and indicate the year you will be processing.
+```{r, message=FALSE, include=FALSE}
+library(tidyverse)
+library(here)
+
+source(here("code/survey123_utility_functions.r"))
+
+source("C:/Users/scott.jennings/Documents/Projects/R_general/utility_functions/bird_utility_functions.R")
+
+zyear = 2020
+```
+
+## Step 1, convert Survey123 data to more-usable format.
+This step uses functions from step1_wrangle_survey123.R
+```{r}
+source(here("code/step1_wrangle_survey123.r"))
+```
+
+Pipe together the functions defined in step1_wrangle_survey123.R  
+This step fixes field names and date fields, adds a helper column to indicate where multiple surveys happened on the same date, then finally splits the data into different "types" (e.g. total nest numbers, predator observations, etc.). These groups of "like" data are referred to as data groups. Each data group requires different procedures and manipulations downstream in the workflow.
+```{r}
+wrangled_s123 <- read_s123(zyear, add.test.data = TRUE) %>% 
+  filter(useforsummary == "y") %>% # 
+  fix_s123_names() %>% 
+  fix_s123_date_fields() %>% 
+  add_multiple_survey_num() %>% 
+  wrangle_s123()
+```
+
+```{r echo=FALSE, include=TRUE}
+wrangled_s123 <- readRDS(paste("data/wrangled/wrangled_s123", zyear, sep = "_"))
+```
+
+The result of these functions is a list, with the elements of the list being dataframes for each data group.
+```{r include=TRUE}
+str(wrangled_s123)
+```
+
+Save wrangled_s123 to the appropriate folder.
+```{r}
+wrangled_s123 %>% saveRDS(paste("data/wrangled/wrangled_s123", zyear, sep = "_"))
+```
+
+
+Next are some functions and code to check for any data issues and prepare for manual screening.
+
+Reload wrangled_s123
+```{r}
+wrangled_s123 <- readRDS(paste("data/wrangled/wrangled_s123", zyear, sep = "_"))
+```
+
+Check which species have nested in each colony. This can help the screener see if any unexpected species are nesting in a given colony, or if a species has disappeared from a colony.
+# for 1, a few, or all colonies, check which species have nested there and peak active nests for each year.
+```{r}
+check_nesting_history(2020, c(53), screened.s123 = FALSE) %>% # from survey123_utility_functions.R
+  pivot_wider(id_cols = c(code, site.name, year), values_from = total.nests, names_from = species) %>% 
+  view()
+```
+
+Check for unexpected values in each data group. Each element (dataframe) of the list can be accessed with $.
+```{r include = FALSE}
+# output of these calls not included here
+summary(wrangled_s123$observers.effort)
+summary(wrangled_s123$nests)
+summary(wrangled_s123$stages)
+summary(wrangled_s123$brood.sizes)
+summary(wrangled_s123$predators)
+summary(wrangled_s123$disturbance)
+summary(wrangled_s123$notes)
+```
+
+Check start and end date match; if nrow = 0, no problem.
+```{r}
+wrangled_s123$dates %>% 
+  filter(as.Date(start, tz = Sys.timezone(location = TRUE)) != as.Date(end, tz = Sys.timezone(location = TRUE))) %>% 
+  nrow()
+```  
+
+
+Check for multiple surveys at same site and same date. Such visits are fine and consistent with the field protocol, and the screening code should handle these multiple surveys fine, but nevertheless good to be aware of before proceeding with screening so you can check to make sure all the data made it through screening appropriately
+```{r}
+wrangled_s123$dates %>% filter(num.surveys.this.date > 1) %>% view()
+```
+
+
+# 1.1.5 check observer X date X colony THIS CURRENTLY NOT WORKING  ----
+```{r include=FALSE}
+check_expected_observers(zyear) %>% # from survey123_utility_functions.R
+  filter(only.unexpected.observer == TRUE) %>% 
+  view()
+```
+
+Check for time span between surveys, not yet developed, needed?
+ 
+## Step 2, output wrangled Survey123 data into Season Summary sheets. This code creates a sheet for each instance where a species nested in a colony. 
+
+First, query wrangled_s123 to get a list of all species in each colony this year. Use this list to make season summary sheets only for species that actually nested at each colony.
+
+```{r}
+colony_spp <- readRDS(paste("data/wrangled/wrangled_s123", zyear, sep = "_"))$nests %>% 
+  filter(total.nests > 0) %>% 
+  distinct(code, species) %>% 
+  mutate(year = zyear) %>% 
+  arrange(code, species)
+```
+
+
+Rendering Season Summary Sheets to .docx files is the most time-consuming process of this workflow. You can remove species X colony instances from this list for sheets that have already been made by querying which files already exist in the appropriate folder.
+```{r}
+if(length(list.files(paste("season_summary_forms/", zyear, "/", sep = ""))) > 0) {
+colony_spp_need_sheet <- colony_spp %>% 
+  anti_join(., list.files(paste("season_summary_forms/", zyear, "/", sep = "")) %>% 
+              data.frame() %>% 
+              rename(file.name = 1) %>% 
+              mutate(file.name = gsub(".docx", "", file.name)) %>%
+              separate(file.name, into = c("code", "year", "species", "screened"), sep = "_") %>% 
+              mutate(across(c(code, year), as.numeric))) 
+} else {
+  colony_spp_need_sheet <- colony_spp
+}
+```
+
+Finally, create season summary sheet for single colony X species. 
+
+```{r}
+system.time(pmap(.l = list(file = here("code/step2_wrangled_s123_to_season_summary.Rmd"), zyear = colony_spp_need_sheet$year, zcode = colony_spp_need_sheet$code, zspp = colony_spp_need_sheet$species), .f = render_season_summary))
+# creating the 6 test data sheets takes ~30 seconds
+```
+
+Note: you can generate a Season Summary Sheet for a single species X colony instance by specifying species and colony in the call to render_season_summary:
+```{r}
+render_season_summary(file = here("code/step2_wrangled_s123_to_season_summary.Rmd"), zyear = 2020, zcode = 599, zspp = "GREG")
+```
+
+
+## step 3, NO CODE - MANUALLY SCREEN SEASON SUMMARY SHEETS.
+
+ * When a sheet has been screened the first time, change its name from [code]_[year]_[species].docx to [code]_[year]_[species]_screened1.docx
+ * If a sheet is screened a second time, change its name from [code]_[year]_[species]_screened1.docx to [code]_[year]_[species]_screened2.docx
+  
+
+  
+   
+## Step 4, extract tables from screened Season Summary Sheets
+This step uses functions in extract_screened_season_summary.R
+```{r}
+source(here("code/step4_extract_screened_season_summary.r"))
+```
+  
+Create a list of Season Summary Sheets that have been screened (requires file renaming in step 3).
+```{r}
+  screened_seas_summ_files <- list.files(paste("season_summary_forms/", zyear, "/", sep = ""), pattern = "screened")
+```
+
+
+There are separate functions in step4_extract_screened_season_summary.r for each data group. These functions loop through each .docx file and extract the pertinent table, then assemble those into a single data frame. Bundling those data frames into a list brings the data back to the same structure and names as wrangled_s123, so that a log of screening changes can be easily made (step 5)
+Note, running the code below will overwrite any previous version of screened_s123, it will not append new records to the previous version. This generally shouldn't be a problem (I can't think of a realistic scenario), but it is something to be aware of.  
+```{r}
+screened_s123 <- list(screen.log = map2_df(zyear, screened_seas_summ_files, get_screening_log),
+                      observers.effort = map2_df(zyear, screened_seas_summ_files, get_observers_effort),
+                      nests = map2_df(zyear, screened_seas_summ_files, get_total_nest_table),
+                      stages = map2_df(zyear, screened_seas_summ_files, get_nest_stage_rop_table),
+                      brood.sizes = map2_df(zyear, screened_seas_summ_files, get_stage4brd),
+                      predators = map2_df(zyear, screened_seas_summ_files, get_predators) %>%  distinct(),
+                      disturbance = map2_df(zyear, screened_seas_summ_files, get_disturbance) %>%  distinct(),
+                      notes = map2_df(zyear, screened_seas_summ_files, get_notes) %>% distinct())  
+```
+
+check the result
+```{r}
+str(screened_s123)
+```
+
+And save it
+```{r}
+saveRDS(screened_s123, here(paste("data/screened/screened_s123_", zyear, sep = "")))
+```
+
+## Step 5 generate screening change log.
+The logic for this step is based on merging pre-screened and screened data. Where this merge results in 2 records instead of 1, this indicates the record was changed during screening.
+
+This step uses functions defined in step5_make_screening_change_log.R
+```{r}
+source(here("code/step5_make_screening_change_log.R"))
+```
+
+As with step 4, a function is called for each data group, and the results are combined into a list. Here the function is a simple join that could be generalized for all data groups, so the same function is called for all data groups. 
+```{r message=FALSE}
+track_changes_s123 <- list(screen.log = readRDS(here(paste("data/screened/screened_s123_", zyear, sep = "")))[["screen.log"]],
+                           observers.effort = make_track_change_tables(zyear, "observers.effort"),
+                           nests = make_track_change_tables(zyear, "nests") %>% 
+                             mutate(date = as.Date(date)) %>% 
+                             arrange(code, species, date),
+                           stages = make_track_change_tables(zyear, "stages") %>% 
+                             mutate(date = as.Date(date)) %>% 
+                             arrange(code, species, date),
+                           brood.sizes = make_track_change_tables(zyear, "brood.sizes") %>% 
+                             mutate(date = as.Date(date)) %>% 
+                             arrange(code, species, date),
+                           predators = make_track_change_tables(zyear, "predators") %>% 
+                             arrange(code, species, predator.species),
+                           disturbance = make_track_change_tables(zyear, "disturbance") %>% 
+                             mutate(date = as.Date(date)) %>% 
+                             arrange(code, species, date),
+                           notes = make_track_change_tables(zyear, "notes") %>% 
+                             mutate(date = as.Date(date)) %>% 
+                             arrange(code, species, date)
+)
+```
+
+You can see that we have now added some additional fields to each data group table to indicate whether records are in wrangled_s123, screened_s123, or both, and whether a Season Summary Sheet was made. Screened and changelog are helper columns, filled based the values of record.in.wrangled, summary.sheet.made and record.in.screened, which can help you quickly identify the status of each record.
+```{r}
+str(track_changes_s123)
+```
+
+
+You can filter based on changelog to see the records that differed between wrangled_s123 and screened_s123. The main fields we expect to change in screening are:
+
+ * peak active date
+ * ROP days
+ * stage 4 date
+ 
+The numeric nest count fields should not change, so be sure to scan those to make sure they didn't change accidentally 
+
+
+```{r}
+filter(track_changes_s123$nests, grepl("changed", changelog)) %>% view()
+
+```
+
+
+saveRDS(track_changes_s123, here(paste("data/track_changes/track_changes_s123_", zyear, sep = ""))) 
+  
+  
+  
+  
+## Step 6 convert to HEPDATA
+
+HEPDATA is a "wide" data structure, and has field names in ALLCAPS. Thus this comprises a bunch of reshaping and renaming. 
+
+```{r}
+source(here("code/step6_screened_to_HEPDATA.R"))
+
+HEPDATA <- screened_to_HEPDATA(zyear)
+```

@@ -1,14 +1,10 @@
 
 
 
-library(tidyverse)
-library(lubridate)
+# requires tidyverse; lubridate
 
-
-options(scipen = 999)
 
 # read, create data ----
-# zyear = 2020
 
 read_s123 <- function(zyear, add.test.data = FALSE) {
 s123_file = paste("HEP_", zyear, "_0", sep = "")
@@ -35,13 +31,6 @@ s123 <- s123 %>%
 
 # code to add test data site info
 # if test data are not added to s_123 in the above read function, then test site data are ignored at left_join where observers_effort created below
-# readRDS("data/HEP_site_names_nums_utm") %>% rbind(., data.frame(code = 599, site.name = "Test colony", utmnorth = 4213415, utmeast = 516975)) %>% saveRDS(., "data/HEP_site_names_nums_utm") 
-
-
-
-
-
-#  wrangled_s123$sites <- rbind(wrangled_s123$sites, data.frame(code = 599, site.name = "Test colony", utmnorth = 4213415, utmeast = 516975))
 
 
 # deal with the funky Survey123 field names ----

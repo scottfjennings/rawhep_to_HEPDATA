@@ -21,6 +21,8 @@ Processing the data from Survey123 to HEPDATA is comprised of 6 steps:
 
 Each of these steps involves multiple sub-steps, and each major step has its own code file where the functions and processes for each sub-step are defined. Users should not need to access or open the major step code files. Rather, the functions defined in these files should be called in a separate script. The file Survey123_to_HEPDATA_workflow.R provides the recommended script, and this vignette has instructions and additional information to proceed through the entire workflow. 
 
+This script relies heavily on the purrr::map family of functions. These functions allow iterating the same process over many instances. In this script you will iterate over colony X species combinations in multiple steps. 
+
 ## Setup 
 load the required packages, source the utility functions code file, and indicate the year you will be processing.
 ```{r, message=FALSE}
@@ -111,7 +113,7 @@ wrangled_s123$dates %>% filter(num.surveys.this.date > 1) %>% view()
 ```
 
 
-# 1.1.5 check observer X date X colony THIS CURRENTLY NOT WORKING  ----
+Check observer X date X colony THIS CURRENTLY NOT WORKING
 ```{r include=FALSE, eval=FALSE}
 check_expected_observers(zyear) %>% # from survey123_utility_functions.R
   filter(only.unexpected.observer == TRUE) %>% 
@@ -120,20 +122,19 @@ check_expected_observers(zyear) %>% # from survey123_utility_functions.R
 
 Check for time span between surveys, not yet developed, needed?
  
-## Step 2, output wrangled Survey123 data into Season Summary sheets. This code creates a sheet for each instance where a species nested in a colony. 
+## Step 2, output wrangled Survey123 data into Season Summary sheets. 
 
-First, query wrangled_s123 to get a list of all species in each colony this year. Use this list to make season summary sheets only for species that actually nested at each colony.
+This code creates a sheet for each instance where a species nested in a colony. 
+
+First, query wrangled_s123 to get a list of all species in each colony this year. Use this list to make season summary sheets only for species that actually nested at each colony. Rendering Season Summary Sheets to .docx files is the most time-consuming process of this workflow. You can remove species X colony instances from this list for sheets that have already been made by querying which files already exist in the appropriate folder.
 
 ```{r}
-colony_spp <- readRDS(paste("data/wrangled/wrangled_s123", zyear, sep = "_"))$nests %>% 
-  filter(total.nests > 0) %>% 
-  distinct(code, species) %>% 
-  mutate(year = zyear) %>% 
-  arrange(code, species)
+colony_spp_need_sheet <- get_colony_spp_need_sheet(zyear)
+
 ```
 
 
-Rendering Season Summary Sheets to .docx files is the most time-consuming process of this workflow. You can remove species X colony instances from this list for sheets that have already been made by querying which files already exist in the appropriate folder.
+
 ```{r}
 if(length(list.files(paste("season_summary_forms/", zyear, "/", sep = ""))) > 0) {
 colony_spp_need_sheet <- colony_spp %>% 
@@ -151,8 +152,7 @@ colony_spp_need_sheet <- colony_spp %>%
 Finally, create season summary sheet for single colony X species. 
 
 ```{r}
-#system.time(pmap(.l = list(file = here("code/step2_wrangled_s123_to_season_summary.Rmd"), zyear = colony_spp_need_sheet$year, zcode = colony_spp_need_sheet$code, zspp = colony_spp_need_sheet$species), .f = render_season_summary))
-# creating the 6 test data sheets takes ~30 seconds
+pmap(.l = list(file = here("code/step2_wrangled_s123_to_season_summary.Rmd"), zyear = colony_spp_need_sheet$year, zcode = colony_spp_need_sheet$code, zspp = colony_spp_need_sheet$species), .f = render_season_summary)
 ```
 
 Note: you can generate a Season Summary Sheet for a single species X colony instance by specifying species and colony in the call to render_season_summary:

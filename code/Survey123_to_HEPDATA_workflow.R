@@ -4,6 +4,7 @@
 
 # setup: run this chunk for every step ---- 
 library(tidyverse)
+library(lubridate)
 library(here)
 library(devtools)
 
@@ -53,25 +54,7 @@ check_expected_observers(zyear) %>% # from survey123_utility_functions.R
 # step 2, output wrangled Survey123 data into Season Summary sheets. ----
 
 # list of all species in each colony this year. 
-colony_spp <- readRDS(paste("data/wrangled/wrangled_s123", zyear, sep = "_"))$nests %>% 
-  filter(total.nests > 0) %>% 
-  distinct(code, species) %>% 
-  mutate(year = zyear) %>% 
-  arrange(code, species)
-
-# remove colony X species that already have sheet made
-if(length(list.files(paste("season_summary_forms/", zyear, "/", sep = ""))) > 0) {
-colony_spp_need_sheet <- colony_spp %>% 
-  anti_join(., list.files(paste("season_summary_forms/", zyear, "/", sep = "")) %>% 
-              data.frame() %>% 
-              rename(file.name = 1) %>% 
-              mutate(file.name = gsub(".docx", "", file.name)) %>%
-              separate(file.name, into = c("code", "year", "species", "screened"), sep = "_") %>% 
-              mutate(across(c(code, year), as.numeric))) 
-} else {
-  colony_spp_need_sheet <- colony_spp
-}
-
+colony_spp_need_sheet <- get_colony_spp_need_sheet(zyear)
 
 # create season summary sheet for single colony X species
 render_season_summary(file = here("code/step2_wrangled_s123_to_season_summary.Rmd"), zyear = 2020, zcode = 599, zspp = "GREG")

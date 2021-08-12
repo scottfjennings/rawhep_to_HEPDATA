@@ -120,6 +120,31 @@ return(nesting_history)
 #  view()
 #}
 
+# make list of colony X species combos that still need a Season Summary Sheet made
+get_colony_spp_need_sheet <- function(zyear) {
+colony_spp <- readRDS(paste("data/wrangled/wrangled_s123", zyear, sep = "_"))$nests %>% 
+  filter(total.nests > 0) %>% 
+  distinct(code, species) %>% 
+  mutate(year = zyear) %>% 
+  arrange(code, species)
+
+# remove colony X species that already have sheet made
+if(length(list.files(paste("season_summary_forms/", zyear, "/", sep = ""))) > 0) {
+colony_spp_need_sheet <- colony_spp %>% 
+  anti_join(., list.files(paste("season_summary_forms/", zyear, "/", sep = "")) %>% 
+              data.frame() %>% 
+              rename(file.name = 1) %>% 
+              mutate(file.name = gsub(".docx", "", file.name)) %>%
+              separate(file.name, into = c("code", "year", "species", "screened"), sep = "_") %>% 
+              mutate(across(c(code, year), as.numeric))) 
+} else {
+  colony_spp_need_sheet <- colony_spp
+}
+
+return(colony_spp_need_sheet)
+}
+
+
 # function to output season summary sheet for a given year, colony and species
 # files must be .docx. .doc will not work without downloading LibreOffice software
 render_season_summary <- function(file = here("code/step2_wrangled_s123_to_season_summary.Rmd"), zyear, zcode, zspp) {

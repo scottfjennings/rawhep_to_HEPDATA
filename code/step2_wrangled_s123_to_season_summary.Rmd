@@ -17,14 +17,9 @@ knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 
 
 ```{r}
-
-library(tidyverse)
-library(lubridate)
-library(RColorBrewer)
-library(rhandsontable)
+# just load packages not needed anywhere else
 library(flextable)
 library(officer)
-library(here)
 library(knitr)
 
 options(scipen = 999)

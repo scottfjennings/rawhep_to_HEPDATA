@@ -66,28 +66,6 @@ if(wrangled_s123$nests %>% filter(species == zspp, code == zcode) %>% summarize(
 ```
 
 
-```{r}
-
-# create a log of when this season summary sheet was created
-if(file.exists(here(paste("season_summary_forms/sheet_creation_logs/sheet_creation_log_", zyear, sep = "")))) {
-readRDS(here(paste("season_summary_forms/sheet_creation_logs/sheet_creation_log_", zyear, sep = ""))) %>% 
-  rbind(data.frame(year = zyear,
-                   code = zcode,
-                   species = zspp,
-                   date.sheet.created = Sys.time())) %>% 
-    group_by(year, code, species) %>% 
-    filter(date.sheet.created == max(date.sheet.created)) %>% 
-  saveRDS(here(paste("season_summary_forms/sheet_creation_logs/sheet_creation_log_", zyear, sep = "")))
-} else {
-  data.frame(year = zyear,
-             code = zcode,
-             species = zspp,
-             date.sheet.created = Sys.time()) %>% 
-  saveRDS(here(paste("season_summary_forms/sheet_creation_logs/sheet_creation_log_", zyear, sep = "")))
-}
-
-```
-
 
 ```{r}
 

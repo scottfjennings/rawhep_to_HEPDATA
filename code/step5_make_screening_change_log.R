@@ -2,13 +2,6 @@
 
 # compare screened to unscreened to generate a list of changes made during screening
 
-# key data fields we expect to change are:
-# peak active date
-# ROP days
-# stage 4 date
-# need to also check numeric nest count fields to make sure they didn't change accidentally 
-
-# logic is based on merging pre-screened and screened data. where this merge results in 2 records instead of 1, this indicates the record was changed during screening
 
 # library(tidyverse)
 # library(here)
@@ -31,9 +24,11 @@ screened_sheets <- list.files(paste("season_summary_forms/", zyear, "/", sep = "
 
 
 make_track_change_tables <- function(zyear, ztable) {
+screened_sheets <- get_screened_sheets(zyear)  
+  
 # get wrangled table 
 wrangled_table <- readRDS(here(paste("data/wrangled/wrangled_s123_", zyear, sep = "")))[[ztable]] %>%  
-  mutate(record.in.prescreened = TRUE) %>% 
+  mutate(record.in.wrangled = TRUE) %>% 
   mutate(across(everything(), as.character))
 
 # get screened table 
@@ -44,14 +39,15 @@ screened_table <- readRDS(here(paste("data/screened/screened_s123_", zyear, sep 
 
 table_changelog <- full_join(wrangled_table, screened_table) %>% 
   full_join(screened_sheets) %>% # join with screen_log to have screening notes and confirmation that this colony X species was screened (assuming good record keeping during screening process) 
-  mutate(changelog = case_when(record.in.prescreened == TRUE & is.na(summary.sheet.made) ~ "no summary sheet",
+  mutate(changelog = case_when(record.in.wrangled == TRUE & is.na(summary.sheet.made) ~ "no summary sheet",
                                #species.not.nesting == TRUE ~ "species not nesting",
                                screened == "no" ~ "not screened",
-                               grepl("screened", screened) & record.in.prescreened == TRUE & is.na(record.in.screened) ~ "screened, changed from",
-                               grepl("screened", screened) & is.na(record.in.prescreened) & record.in.screened == TRUE ~ "screened, changed to",
-                               grepl("screened", screened) & record.in.prescreened == TRUE & record.in.screened == TRUE ~ "screened, no change")) %>% 
+                               grepl("screened", screened) & record.in.wrangled == TRUE & is.na(record.in.screened) ~ "screened, changed from",
+                               grepl("screened", screened) & is.na(record.in.wrangled) & record.in.screened == TRUE ~ "screened, changed to",
+                               grepl("screened", screened) & record.in.wrangled == TRUE & record.in.screened == TRUE ~ "screened, no change")) %>% 
   mutate(code = as.numeric(code)) %>% 
-  select(code, species, everything())
+  select(code, species, everything()) %>% 
+  relocate(c(record.in.wrangled, summary.sheet.made, record.in.screened, screened, changelog), .after = last_col())
 return(table_changelog)
 }
 

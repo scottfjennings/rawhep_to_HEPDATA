@@ -3,16 +3,16 @@ title: "Survey123_to_HEPDATA_flowchart"
 author: ''
 date: "`r Sys.Date()`"
 output:
-  html_document:
-    df_print: paged
-params:
-  output_dir: ..
+  pdf_document: default
+  rmarkdown::github_document: default
+  word_document: default
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 ```
 
+This flow chart shows the key steps and objects of the Survey123 to HEPDATA workflow. The tan file boxes indicate objects which are saved to disk, while blue rectangles indicate processes. Each process is achieved using its own code file (perhaps using functions also defined in survey123_utility_functions.r).
 
 ```{r }
 

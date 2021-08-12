@@ -8,10 +8,6 @@
 # hepdata_names <- readRDS("data/HEPDATA_names")
 # we need to expand out to all possible columns here
 
-library(tidyverse)
-library(here)
-# zyear = 2020
-
 screened_to_HEPDATA <- function(zyear) {
 screened_s123 <- readRDS(here(paste("data/screened/screened_s123_", zyear, sep = "")))
 

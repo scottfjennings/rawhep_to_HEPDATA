@@ -1,15 +1,8 @@
 
 
 
-# can run this entire script at once, only need to change zyear to the desired year.
-
-library(tidyverse)
+# only load package that's needed here. 
 library(docxtractr)
-library(here)
-library(lubridate)
-
-#seas_summ_files <- list.files(paste("season_summary_forms/", zyear, "/", sep = ""))
-
 
 
 # zyear = 2020

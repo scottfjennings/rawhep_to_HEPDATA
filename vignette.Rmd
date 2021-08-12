@@ -1,6 +1,6 @@
 ---
 title: "How to process data from Survey123 to HEPDATA"
-output: pdf_document
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
@@ -21,8 +21,9 @@ Processing the data from Survey123 to HEPDATA is comprised of 6 steps:
 
 Each of these steps involves multiple sub-steps, and each major step has its own code file where the functions and processes for each sub-step are defined. Users should not need to access or open the major step code files. Rather, the functions defined in these files should be called in a separate script. The file Survey123_to_HEPDATA_workflow.R provides the recommended script, and this vignette has instructions and additional information to proceed through the entire workflow. 
 
-# Setup: load the required packages, source the utility functions code file, and indicate the year you will be processing.
-```{r, message=FALSE, include=FALSE}
+## Setup 
+load the required packages, source the utility functions code file, and indicate the year you will be processing.
+```{r, message=FALSE}
 library(tidyverse)
 library(here)
 
@@ -41,7 +42,7 @@ source(here("code/step1_wrangle_survey123.r"))
 
 Pipe together the functions defined in step1_wrangle_survey123.R  
 This step fixes field names and date fields, adds a helper column to indicate where multiple surveys happened on the same date, then finally splits the data into different "types" (e.g. total nest numbers, predator observations, etc.). These groups of "like" data are referred to as data groups. Each data group requires different procedures and manipulations downstream in the workflow.
-```{r}
+```{r eval=FALSE, message=FALSE}
 wrangled_s123 <- read_s123(zyear, add.test.data = TRUE) %>% 
   filter(useforsummary == "y") %>% # 
   fix_s123_names() %>% 
@@ -50,13 +51,17 @@ wrangled_s123 <- read_s123(zyear, add.test.data = TRUE) %>%
   wrangle_s123()
 ```
 
-```{r echo=FALSE, include=TRUE}
+```{r echo=FALSE, eval=TRUE}
 wrangled_s123 <- readRDS(paste("data/wrangled/wrangled_s123", zyear, sep = "_"))
 ```
 
 The result of these functions is a list, with the elements of the list being dataframes for each data group.
 ```{r include=TRUE}
-str(wrangled_s123)
+names(wrangled_s123)
+```
+
+```{r include=TRUE}
+str(wrangled_s123$nests)
 ```
 
 Save wrangled_s123 to the appropriate folder.
@@ -81,7 +86,7 @@ check_nesting_history(2020, c(53), screened.s123 = FALSE) %>% # from survey123_u
 ```
 
 Check for unexpected values in each data group. Each element (dataframe) of the list can be accessed with $.
-```{r include = FALSE}
+```{r eval = FALSE}
 # output of these calls not included here
 summary(wrangled_s123$observers.effort)
 summary(wrangled_s123$nests)
@@ -107,7 +112,7 @@ wrangled_s123$dates %>% filter(num.surveys.this.date > 1) %>% view()
 
 
 # 1.1.5 check observer X date X colony THIS CURRENTLY NOT WORKING  ----
-```{r include=FALSE}
+```{r include=FALSE, eval=FALSE}
 check_expected_observers(zyear) %>% # from survey123_utility_functions.R
   filter(only.unexpected.observer == TRUE) %>% 
   view()
@@ -146,13 +151,13 @@ colony_spp_need_sheet <- colony_spp %>%
 Finally, create season summary sheet for single colony X species. 
 
 ```{r}
-system.time(pmap(.l = list(file = here("code/step2_wrangled_s123_to_season_summary.Rmd"), zyear = colony_spp_need_sheet$year, zcode = colony_spp_need_sheet$code, zspp = colony_spp_need_sheet$species), .f = render_season_summary))
+#system.time(pmap(.l = list(file = here("code/step2_wrangled_s123_to_season_summary.Rmd"), zyear = colony_spp_need_sheet$year, zcode = colony_spp_need_sheet$code, zspp = colony_spp_need_sheet$species), .f = render_season_summary))
 # creating the 6 test data sheets takes ~30 seconds
 ```
 
 Note: you can generate a Season Summary Sheet for a single species X colony instance by specifying species and colony in the call to render_season_summary:
 ```{r}
-render_season_summary(file = here("code/step2_wrangled_s123_to_season_summary.Rmd"), zyear = 2020, zcode = 599, zspp = "GREG")
+#render_season_summary(file = here("code/step2_wrangled_s123_to_season_summary.Rmd"), zyear = 2020, zcode = 599, zspp = "GREG")
 ```
 
 

@@ -17,10 +17,10 @@ zyear = 2020
 # step 1, convert Survey123 data to more-usable format ----
 source(here("code/step1_wrangle_survey123.r"))
 
-wrangled_s123 <- read_s123(zyear, add.test.data = TRUE) %>% 
+wrangled_s123 <- read_s123(zyear, zversion = "Final", add.test.data = FALSE) %>% 
   filter(useforsummary == "y") %>% 
   fix_s123_names() %>% 
-  fix_s123_date_fields() %>% 
+  fix_s123_date_fields(zformat = "%m/%d/%Y %H:%M") %>% 
   add_multiple_survey_num() %>% 
   wrangle_s123()
   
@@ -113,6 +113,7 @@ track_changes_s123 <- list(screen.log = readRDS(here(paste("data/screened/screen
 )
 
 
+# view changed records
 track_changes_s123$nests %>% 
   filter(grepl("changed", changelog)) %>% view()
 

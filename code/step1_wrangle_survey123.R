@@ -6,8 +6,8 @@
 
 # read, create data ----
 
-read_s123 <- function(zyear, add.test.data = FALSE) {
-s123_file = paste("HEP_", zyear, "_0", sep = "")
+read_s123 <- function(zyear, zversion = "0", add.test.data = FALSE) {
+s123_file = paste("HEP", zyear, zversion, sep = "_")
 #s123_file_proofed <- paste("HEP", zyear, "cumulative", sep = "")
 
 # read site data
@@ -65,10 +65,10 @@ return(s123)
 
 # convert date fields ----
 # fix time zone to pacific
-fix_s123_date_fields <- function(s123) {
+fix_s123_date_fields <- function(s123, zformat = "%m/%d/%Y %I:%M:%S %p") {
 s123 <- s123 %>% 
-  mutate(start = as.POSIXct(start, format = "%m/%d/%Y %I:%M:%S %p", tz = "GMT"),
-         end = as.POSIXct(end, format = "%m/%d/%Y %I:%M:%S %p", tz = "GMT")) %>% 
+  mutate(start = as.POSIXct(start, format = zformat, tz = "GMT"),
+         end = as.POSIXct(end, format = zformat, tz = "GMT")) %>% 
   mutate(start = with_tz(start, Sys.timezone(location = TRUE)),
          end = with_tz(end, Sys.timezone(location = TRUE)),
          date = as.Date(start, tz = Sys.timezone(location = TRUE)))

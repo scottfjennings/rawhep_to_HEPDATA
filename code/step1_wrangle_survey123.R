@@ -20,11 +20,11 @@ s123_file = paste("HEP_", zyear, "_0", sep = "")
 
 # downloaded Survey123 data
 s123 <- read.csv(
-  paste("data/downloaded/", s123_file, ".csv", sep = "")
+  here(paste("data/downloaded/", s123_file, ".csv", sep = ""))
   )
 
 if(add.test.data == TRUE) {
- s123 <- rbind(s123, readRDS("data/downloaded/test_data"))
+ s123 <- rbind(s123, readRDS(here("data/downloaded/test_data")))
 }
 
 s123 <- s123 %>% 

@@ -2,14 +2,6 @@
 
 # compare screened to unscreened to generate a list of changes made during screening
 
-
-# library(tidyverse)
-# library(here)
-
-# zyear = 2020
-# screened_s123 <- readRDS(here(paste("data/screened/screened_s123_", zyear, sep = "")))
-# wrangled_s123 <- readRDS(here(paste("data/wrangled/wrangled_s123_", zyear, sep = "")))
-
 get_screened_sheets <- function(zyear) {
 screened_sheets <- list.files(paste("season_summary_forms/", zyear, "/", sep = "")) %>% 
   data.frame() %>% 

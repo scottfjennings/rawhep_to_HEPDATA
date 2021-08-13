@@ -8,14 +8,16 @@ library(lubridate)
 library(here)
 library(devtools)
 
-source(here("code/survey123_utility_functions.r"))
+#source(here("code/survey123_utility_functions.r"))
+source_url("https://github.com/scottfjennings/Survey123_to_HEPDATA/blob/main/code/survey123_utility_functions.R?raw=TRUE")
+
 
 source("C:/Users/scott.jennings/Documents/Projects/R_general/utility_functions/bird_utility_functions.R")
 
 zyear = 2020
 #
 # step 1, convert Survey123 data to more-usable format ----
-source(here("code/step1_wrangle_survey123.r"))
+source_url("https://github.com/scottfjennings/Survey123_to_HEPDATA/blob/main/code/step1_wrangle_survey123.R?raw=TRUE")
 
 wrangled_s123 <- read_s123(zyear, zversion = "Final", add.test.data = FALSE) %>% 
   filter(useforsummary == "y") %>% 

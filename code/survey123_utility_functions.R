@@ -147,7 +147,7 @@ return(colony_spp_need_sheet)
 
 # function to output season summary sheet for a given year, colony and species
 # files must be .docx. .doc will not work without downloading LibreOffice software
-render_season_summary <- function(file = source_url("https://github.com/scottfjennings/Survey123_to_HEPDATA/blob/main/code/step2_wrangled_s123_to_season_summary.Rmd?raw=TRUE"), zyear, zcode, zspp) {
+render_season_summary <- function(file = here("code/step2_wrangled_s123_to_season_summary.Rmd"), zyear, zcode, zspp) {
   rmarkdown::render(file, params = list(
     zyear = zyear,
     zcode = zcode,

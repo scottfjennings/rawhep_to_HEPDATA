@@ -8,14 +8,16 @@ library(lubridate)
 library(here)
 library(devtools)
 
-source(here("code/survey123_utility_functions.r"))
+#source(here("code/survey123_utility_functions.r"))
+source_url("https://github.com/scottfjennings/Survey123_to_HEPDATA/blob/main/code/survey123_utility_functions.R?raw=TRUE")
+
 
 source("C:/Users/scott.jennings/Documents/Projects/R_general/utility_functions/bird_utility_functions.R")
 
 zyear = 2020
 #
 # step 1, convert Survey123 data to more-usable format ----
-source(here("code/step1_wrangle_survey123.r"))
+source_url("https://github.com/scottfjennings/Survey123_to_HEPDATA/blob/main/code/step1_wrangle_survey123.R?raw=TRUE")
 
 wrangled_s123 <- read_s123(zyear, zversion = "Final", add.test.data = FALSE) %>% 
   filter(useforsummary == "y") %>% 
@@ -57,13 +59,13 @@ check_expected_observers(zyear) %>% # from survey123_utility_functions.R
 colony_spp_need_sheet <- get_colony_spp_need_sheet(zyear)
 
 # create season summary sheet for single colony X species
-render_season_summary(file = here("code/step2_wrangled_s123_to_season_summary.Rmd"), zyear = 2020, zcode = 599, zspp = "GREG")
+render_season_summary(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = 2020, zcode = 599, zspp = "GREG")
 
 # create season summary sheet for all colony X species that don't yet have a sheet
 # if testing, can further subset colony_spp_need_sheet, here just doing the test data
 # colony_spp_need_sheet <- colony_spp_need_sheet %>% filter(code == 599)
 
-system.time(pmap(.l = list(file = here("code/step2_wrangled_s123_to_season_summary.Rmd"), zyear = colony_spp_need_sheet$year, zcode = colony_spp_need_sheet$code, zspp = colony_spp_need_sheet$species), .f = render_season_summary))
+system.time(pmap(.l = list(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = colony_spp_need_sheet$year, zcode = colony_spp_need_sheet$code, zspp = colony_spp_need_sheet$species), .f = render_season_summary))
 # creating the 6 test data sheets takes ~30 seconds
 
 

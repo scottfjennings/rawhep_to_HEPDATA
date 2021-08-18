@@ -54,9 +54,9 @@ wrangled_s123 <- readRDS(here(paste("data/wrangled/wrangled_s123", zyear, sep = 
 
 # if this value is > 0, can click knit above and the season summary sheet will be generated
 # if this value = 0, append the didn't nest list:
-if(wrangled_s123$nests %>% filter(species == zspp, code == zcode) %>% summarize(max(total.nests)) == 0) {
-  knit_exit()
-}
+#if(wrangled_s123$nests %>% filter(species == zspp, code == zcode) %>% summarize(max(total.nests)) == 0) {
+#  knit_exit()
+#}
 
 ```
 

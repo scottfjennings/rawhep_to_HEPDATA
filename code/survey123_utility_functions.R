@@ -188,12 +188,13 @@ return(dist.response.field)
 get_terrestrial_predators <- function(x) {
   
   
-terr_preds <- c("raccoon", "cat", "coyote", "eagle_sp")  
+terr_preds <- c("raccoon", "cat", "coyote", "eagle_sp", "fox")  
 
 terr_pred_str <- paste(terr_preds, collapse = "|")
   
 out_names <- paste(str_extract_all(tolower(x), terr_pred_str[[1]]))
-out_names <- gsub(paste(c("character[(]0[)]", "c[(]", "[)]", '"'), collapse = "|"), "", out_names)
+out_names <- gsub("[()]", "", out_names)
+out_names <- gsub(paste(c("character0", '"'), collapse = "|"), "", out_names)
 out_names <- gsub(", ", "_", out_names)
 out_names <- gsub("eagle_sp", "eagle species", out_names)
   

@@ -17,6 +17,8 @@ source("C:/Users/scott.jennings/Documents/Projects/R_general/utility_functions/b
 zyear = 2020
 #
 # step 1, convert Survey123 data to more-usable format ----
+# source(here("code/step1_wrangle_survey123.R"))
+
 source_url("https://github.com/scottfjennings/Survey123_to_HEPDATA/blob/main/code/step1_wrangle_survey123.R?raw=TRUE")
 
 wrangled_s123 <- read_s123(zyear, zversion = "Final", add.test.data = FALSE) %>% 
@@ -35,6 +37,22 @@ wrangled_s123 <- readRDS(paste("data/wrangled/wrangled_s123", zyear, sep = "_"))
 check_nesting_history(2020, c(53), screened.s123 = FALSE) %>% # from survey123_utility_functions.R
   pivot_wider(id_cols = c(code, site.name, year), values_from = total.nests, names_from = species) %>% 
   view()
+
+# are there any important notes in records for inactive colonies? ----
+inactive_notes <- wrangled_s123$nests %>% 
+  group_by(code) %>% 
+  summarise(all.spp.nests = sum(total.nests)) %>% 
+  ungroup() %>% 
+  filter(all.spp.nests == 0) %>% 
+  left_join(., wrangled_s123$notes %>% 
+              distinct(code, multiple.survey.num, note.type, notes)) %>% 
+  left_join(., wrangled_s123$disturbance %>% 
+              mutate(date = as.Date(date),
+                     multiple.survey.num = as.numeric(multiple.survey.num)) %>% 
+              distinct(code, multiple.survey.num, obs.inf, type, result, description)) %>% 
+  left_join(., wrangled_s123$predators %>% distinct(code, predator.species, present, nesting))
+
+write.csv(inactive_notes, here(paste("data/inactive_notes_", zyear, ".csv", sep = "")))
 
 # check start and end date match ----
 # if nrow = 0, no problem
@@ -59,7 +77,7 @@ check_expected_observers(zyear) %>% # from survey123_utility_functions.R
 colony_spp_need_sheet <- get_colony_spp_need_sheet(zyear)
 
 # create season summary sheet for single colony X species
-render_season_summary(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = 2020, zcode = 599, zspp = "GREG")
+render_season_summary(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = 2020, zcode = 118, zspp = "GREG")
 
 # create season summary sheet for all colony X species that don't yet have a sheet
 # if testing, can further subset colony_spp_need_sheet, here just doing the test data

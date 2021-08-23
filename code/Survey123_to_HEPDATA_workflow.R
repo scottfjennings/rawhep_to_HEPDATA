@@ -33,6 +33,13 @@ wrangled_s123 %>% saveRDS(here(paste("data/wrangled/wrangled_s123", zyear, sep =
 # step 1.1, check for any data issues, and data summary helpers to prepare for manual screening ----
 wrangled_s123 <- readRDS(paste("data/wrangled/wrangled_s123", zyear, sep = "_"))
 #
+# check year matches zyear ----
+wrangled_s123$dates %>% 
+  mutate(start.year.diff = year(start) - zyear,
+         end.year.diff = year(end) - zyear) %>% 
+  filter(start.year.diff != 0 | end.year.diff != 0) %>%
+  view()
+# if there are records in the resulting object, go back and fix in Survey123
 # which species have nested in each colony? ---- 
 check_nesting_history(2020, c(53), screened.s123 = FALSE) %>% # from survey123_utility_functions.R
   pivot_wider(id_cols = c(code, site.name, year), values_from = total.nests, names_from = species) %>% 
@@ -90,8 +97,9 @@ system.time(pmap(.l = list(file = here("code/step2_wrangled_to_season_summary.Rm
 # step 3, NO CODE - STOP AND MANUALLY SCREEN SEASON SUMMARY SHEETS. ---- 
 
 # step 4, extract tables from screened Season Summary Sheets ----
-source_url("https://github.com/scottfjennings/Survey123_to_HEPDATA/blob/main/code/step4_extract_screened_season_summary.R")
+source_url("https://github.com/scottfjennings/Survey123_to_HEPDATA/blob/main/code/step4_extract_screened_season_summary.R?raw=TRUE")
 
+screened_seas_summ_files <- list.files(paste("season_summary_forms/", zyear, "/", sep = ""))
 
 # note, running the code below will overwrite any previous version of screened_s123, it will not append new records to the previous version. This generally shouldn't be a problem (I can't think of a realistic scenario), but it is something to be aware of.  
 
@@ -102,7 +110,8 @@ screened_s123 <- list(screen.log = map2_df(zyear, screened_seas_summ_files, get_
                       brood.sizes = map2_df(zyear, screened_seas_summ_files, get_stage4brd),
                       predators = map2_df(zyear, screened_seas_summ_files, get_predators) %>%  distinct(),
                       disturbance = map2_df(zyear, screened_seas_summ_files, get_disturbance) %>%  distinct(),
-                      notes = map2_df(zyear, screened_seas_summ_files, get_notes) %>% distinct())  
+                      notes = map2_df(zyear, screened_seas_summ_files, get_notes) %>% distinct()
+                      )  
 
   
 saveRDS(screened_s123, here(paste("data/screened/screened_s123_", zyear, sep = "")))

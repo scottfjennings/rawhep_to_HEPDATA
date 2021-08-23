@@ -80,6 +80,18 @@ Reload wrangled_s123
 wrangled_s123 <- readRDS(paste("data/wrangled/wrangled_s123", zyear, sep = "_"))
 ```
 
+
+Check year matches zyear  
+```{r}
+wrangled_s123$dates %>% 
+  mutate(start.year.diff = year(start) - zyear,
+         end.year.diff = year(end) - zyear) %>% 
+  filter(start.year.diff != 0 | end.year.diff != 0) %>%
+  view()
+```
+If there are records in the resulting object, go back and fix in Survey123  
+
+
 Check which species have nested in each colony. This can help the screener see if any unexpected species are nesting in a given colony, or if a species has disappeared from a colony.
 # for 1, a few, or all colonies, check which species have nested there and peak active nests for each year.
 ```{r}

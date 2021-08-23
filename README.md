@@ -4,8 +4,7 @@ README
 
 Process and screen ACR Heron and Egret Monitoring Project data that was
 entered in Survey123; end goal is screened data for input into HEPDATA.
-Processing the data from Survey123 to HEPDATA is comprised of 6 steps:
-![](README_files/figure-gfm/unnamed-chunk-2-1.png
+Processing the data from Survey123 to HEPDATA is comprised of 6 steps
 
 Each of these steps involves multiple sub-steps, and each major step has
 its own code file where the functions and processes for each sub-step
@@ -15,8 +14,7 @@ and the file Survey123_to_HEPDATA_workflow.R should serve as a
 vignette with examples and instructions to call the functions for the
 entire workflow.
 
-Each step involve writing files to disk. Thus it is important that this
-workflow be conducted in a location with the following folder structure:
+Each step ends with writing files to disk, and subsequent steps read those written files back in. Thus, the workflow can be paused between steps. However, it is important that this workflow be conducted in a location with the following folder structure:
 
   - Survey123_to_HEPDATA
       - code

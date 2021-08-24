@@ -121,10 +121,15 @@ return(nesting_history)
 #}
 
 # make list of colony X species combos that still need a Season Summary Sheet made
-get_colony_spp_need_sheet <- function(zyear) {
-colony_spp <- readRDS(paste("data/wrangled/wrangled_s123", zyear, sep = "_"))$nests %>% 
-  filter(total.nests > 0) %>% 
-  distinct(code, species) %>% 
+get_colony_spp_need_sheet <- function(zyear, include.inactive = TRUE) {
+colony_spp <- readRDS(paste("data/wrangled/wrangled_s123", zyear, sep = "_"))$nests 
+
+if(include.inactive == FALSE) {
+  colony_spp <- colony_spp %>% 
+    filter(total.nests > 0) 
+}
+ colony_spp <- colony_spp %>% 
+   distinct(code, species) %>% 
   mutate(year = zyear) %>% 
   arrange(code, species)
 

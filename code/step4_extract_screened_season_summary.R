@@ -83,6 +83,8 @@ total_nests <- map(total_nest_tables, get_date_tables)  %>%
 
 }
 
+#get_total_nest_table <- possibly(get_total_nest_table, otherwise = NULL)
+
 # all_total_nest_tables <- map2_df(zyear, seas_summ_files, get_total_nest_table) %>% fix_dates() 
 
 

@@ -46,7 +46,8 @@ get_observers_effort <- function(zyear, zfile) {
 monthday_to_date <- function(zdf) {
   zdf <- zdf %>% 
     separate(date, into = c("date", "multiple.survey.num"), 7) %>% 
-    mutate(multiple.survey.num = ifelse(multiple.survey.num == "" | is.na(multiple.survey.num), 1, multiple.survey.num)) %>% 
+    mutate(multiple.survey.num = ifelse(multiple.survey.num == "" | is.na(multiple.survey.num), 1, multiple.survey.num),
+           multiple.survey.num = as.numeric(multiple.survey.num)) %>% 
     mutate(date = gsub("X", paste(zyear, "-", sep = ""), date),
            date = gsub("\\.", "-", date),
            date = as.Date(date))
@@ -83,6 +84,7 @@ total_nests <- map(total_nest_tables, get_date_tables)  %>%
 
 }
 
+#get_total_nest_table <- safely(get_total_nest_table)
 #get_total_nest_table <- possibly(get_total_nest_table, otherwise = NULL)
 
 # all_total_nest_tables <- map2_df(zyear, seas_summ_files, get_total_nest_table) %>% fix_dates() 
@@ -136,17 +138,25 @@ if(grepl("GREG|GBHE", zfile)){
   extr_doc <- docx_extract_all_tbls(doc)
   stage4brd <- extr_doc[[length(extr_doc) - 4]]
   stage4brd <- stage4brd %>% 
+    rename_all(~sub("brd.date", "brd.size.date", .x))
+
+  if(nrow(stage4brd) == 1 & stage4brd$brd.size.date == "NA") {
+    stage4brd = NULL
+  } else {
+  stage4brd <- stage4brd %>% 
     pivot_longer(cols = c(paste("brd", seq(1, 5), sep = ".")), names_to = "brd", values_to = "num.nests") %>%
     mutate(brd = gsub("brd.", "", brd)) %>% 
     separate(date, into = c("date", "multiple.survey.num"), 11) %>% 
     mutate(multiple.survey.num = ifelse(multiple.survey.num == "" | is.na(multiple.survey.num), 1, multiple.survey.num)) %>% 
     select(code, date, multiple.survey.num, species, num.nests, brd, brd.size.date, stage5.nests) %>% 
     mutate(across(.cols = c(code, num.nests), as.numeric))
-}
+  }
+  }
 }
 
-# all_stage4brd <- map2_df(zyear, seas_summ_files, get_stage4brd) 
-#
+# all_stage4brd <- map2(zyear, screened_seas_summ_files[1:14], safely(get_stage4brd)) 
+
+# get_stage4brd(zyear, screened_seas_summ_files[3]) %>% view()
 
 # disturbance ----
  get_disturbance <- function(zyear, zfile) {
@@ -180,7 +190,8 @@ get_notes <- function(zyear, zfile) {
   notes <- notes %>% 
     separate(date, into = c("date", "multiple.survey.num"), 11) %>% 
     mutate(code = as.numeric(code),
-           multiple.survey.num = ifelse(multiple.survey.num == "" | is.na(multiple.survey.num), 1, multiple.survey.num))
+           multiple.survey.num = ifelse(multiple.survey.num == "" | is.na(multiple.survey.num), 1, multiple.survey.num),
+           multiple.survey.num = as.numeric(multiple.survey.num))
   }
 
 # all_notes <- map2_df(zyear, seas_summ_files, get_notes) %>% distinct() # should be duplicated for each species, distinct will remove dups

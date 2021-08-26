@@ -21,7 +21,7 @@ zyear = 2020
 
 source_url("https://github.com/scottfjennings/Survey123_to_HEPDATA/blob/main/code/step1_wrangle_survey123.R?raw=TRUE")
 
-wrangled_s123 <- read_s123(zyear, zversion = "Final", add.test.data = FALSE) %>% 
+wrangled_s123 <- read_s123(zyear, zversion = "Final", add.test.data = TRUE) %>% 
   filter(useforsummary == "y") %>% 
   fix_s123_names() %>% 
   fix_s123_date_fields(zformat = "%m/%d/%Y %H:%M") %>% 
@@ -84,7 +84,7 @@ check_expected_observers(zyear) %>% # from survey123_utility_functions.R
 colony_spp_need_sheet <- get_colony_spp_need_sheet(zyear)
 
 # create season summary sheet for single colony X species
-render_season_summary(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = 2020, zcode = 118, zspp = "GREG")
+render_season_summary(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = 2020, zcode = 599, zspp = "GREG")
 
 # create season summary sheet for all colony X species that don't yet have a sheet
 # if testing, can further subset colony_spp_need_sheet, here just doing the test data
@@ -97,12 +97,13 @@ system.time(pmap(.l = list(file = here("code/step2_wrangled_to_season_summary.Rm
 # step 3, NO CODE - STOP AND MANUALLY SCREEN SEASON SUMMARY SHEETS. ---- 
 
 # step 4, extract tables from screened Season Summary Sheets ----
+# source(here("code/step4_extract_screened_season_summary.R"))
 source_url("https://github.com/scottfjennings/Survey123_to_HEPDATA/blob/main/code/step4_extract_screened_season_summary.R?raw=TRUE")
 
 screened_seas_summ_files <- list.files(paste("season_summary_forms/", zyear, "/", sep = ""))
 
 # note, running the code below will overwrite any previous version of screened_s123, it will not append new records to the previous version. This generally shouldn't be a problem (I can't think of a realistic scenario), but it is something to be aware of.  
-
+# this will take several 10s of seconds
 screened_s123 <- list(screen.log = map2_df(zyear, screened_seas_summ_files, get_screening_log),
                       observers.effort = map2_df(zyear, screened_seas_summ_files, get_observers_effort),
                       nests = map2_df(zyear, screened_seas_summ_files, get_total_nest_table),
@@ -112,10 +113,14 @@ screened_s123 <- list(screen.log = map2_df(zyear, screened_seas_summ_files, get_
                       disturbance = map2_df(zyear, screened_seas_summ_files, get_disturbance) %>%  distinct(),
                       notes = map2_df(zyear, screened_seas_summ_files, get_notes) %>% distinct()
                       )  
-
+ 
   
 saveRDS(screened_s123, here(paste("data/screened/screened_s123_", zyear, sep = "")))
- 
+
+# if creating screened_s123 fails on one of the sheets, you can use safely to help find the offending sheet
+nests = map2(zyear, screened_seas_summ_files, safely(get_total_nest_table))
+map(nests, "error") %>% view()
+
 # step 5 generate screening change log ----
 source(here("code/step5_make_screening_change_log.R"))
 

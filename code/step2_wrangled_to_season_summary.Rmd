@@ -294,7 +294,6 @@ nest_totals_df <- rbind(total.nests, peak_active, obs_initials) %>%
 ```
 <br>
 Total nests - note "code" is the colony specific code number  
-"*" by date indicates "no" entered for complete colony count
 ```{r}
 nest_totals <- date_table_splitter(nest_totals_df)
 ```

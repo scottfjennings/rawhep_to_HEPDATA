@@ -14,7 +14,7 @@ and the file Survey123_to_HEPDATA_workflow.R should serve as a
 vignette with examples and instructions to call the functions for the
 entire workflow.
 
-Each step ends with writing files to disk, and subsequent steps read those written files back in. Thus, the workflow can be paused between steps. However, it is important that this workflow be conducted in a location with the following folder structure:
+Each step ends with writing files to disk, and subsequent steps read those written files back in. Thus, the workflow can be paused between steps. If you copy these code files locally, it will probably only work if you also create a local RStudio project in a location with the following folder structure:
 
   - Survey123_to_HEPDATA
       - code

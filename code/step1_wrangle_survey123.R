@@ -114,20 +114,6 @@ observers <- s123 %>%
 
 # filter(observers, role == "Recording.Observer" & name %in% c("other", "Other")) %>% view()
 
-# deal with single funky name record in 2021
-#  TODO fix this in Survey123
-if(zyear == 2021) {
-observers <- rbind(observers, code = rep("68.1", 2),
-                              date = rep("2021-03-06", 2),
-                               role = c("Recording.Observer.", "Other.Observer.Name."),
-                               name = c("WendyCole", "SusanCalcagno")) %>% 
-  filter(name != "Wendy Cole recording observer, Susan Calcagno") %>% 
-  mutate(code = as.numeric(code)) %>% 
-  arrange(code, date)
-} else {
-  observers <- observers
-}
-
 
 effort_hours_surveys <- s123 %>% 
   select(code, start, end, date, multiple.survey.num, num.surveys.this.date) %>% 

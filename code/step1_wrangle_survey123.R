@@ -3,8 +3,7 @@
 
 # requires tidyverse; lubridate
 
-# s123 <- wrangled_s123
-
+# 
 # read, create data ----
 
 read_s123 <- function(zyear, zversion = "0", add.test.data = FALSE) {
@@ -124,16 +123,16 @@ effort_hours_surveys <- s123 %>%
   group_by(code) %>% 
   summarise(total.hours = sum(effort.hours),
             total.hours = round(total.hours, 2),
-            total.surveys = n())
+            total.surveys = n(), .groups = "drop")
 
 
 effort_days <- s123 %>% 
   distinct(code,  date) %>% 
   group_by(code) %>% 
-  summarise(total.days = n())
+  summarise(total.days = n(), .groups = "drop")
 
 
-effort <- full_join(effort_days, effort_hours_surveys)
+effort <- full_join(effort_days, effort_hours_surveys, by = "code")
 
 
 seas_summary_observers <- observers %>% 
@@ -141,13 +140,12 @@ seas_summary_observers <- observers %>%
   mutate(name = ifelse(grepl("Recording", role), paste(name, "*", sep = ""), name)) %>% 
   distinct(code, name) %>% 
   group_by(code) %>% 
-  summarise(observers = paste(name, collapse = "; ")) %>% 
-  ungroup() %>% 
+  summarise(observers = paste(name, collapse = "; "), .groups = "drop") %>%
   mutate(observers = gsub("([[:lower:]])([[:upper:]][[:lower:]])", "\\1 \\2", observers)) # add space between first and last names
   
 
-observers_effort <- full_join(seas_summary_observers, effort) %>% 
-  left_join(readRDS(here("data/HEP_site_names_nums_utm"))) %>% 
+observers_effort <- full_join(seas_summary_observers, effort, by = "code") %>% 
+  left_join(readRDS(here("data/HEP_site_names_nums_utm")), by = "code") %>% 
   select(code, colony = site.name, observers, total.days, total.surveys, total.hours)
 
 
@@ -192,7 +190,7 @@ if(any(count(which_rop, date, code, multiple.survey.num) > 1)) {
     filter(n > 1) %>% 
     mutate(out.col = paste(code, date, sep = ", ")) %>% 
     select(out.col) %>% 
-    summarise(out.col = paste(out.col, collapse = "; "))
+    summarise(out.col = paste(out.col, collapse = "; "), .groups = "drop")
   
   which_rop <- which_rop %>% 
     mutate(rop.num = gsub("rop.", "", which.rop)) %>% 
@@ -256,20 +254,19 @@ observer_initials_by_date <- observers %>%
   distinct(code, multiple.survey.num, date, name) %>% 
   mutate(initials = gsub("[^::A-Z::]","", name)) %>% 
   group_by(code, date, multiple.survey.num) %>%
-  summarise(obs.initials = paste(initials, collapse='; ')) %>% 
-  ungroup()
+  summarise(obs.initials = paste(initials, collapse='; '), .groups = "drop")
   
   
 
-total_nests <- full_join(bird_total_nests, peak_active) %>% 
+total_nests <- full_join(bird_total_nests, peak_active, by = c("code", "date", "multiple.survey.num", "species", "complete.count")) %>% 
   mutate(peak.active = ifelse(is.na(peak.active), FALSE, peak.active)) %>% 
-  full_join(observer_initials_by_date)
+  full_join(observer_initials_by_date, by = c("code", "date", "multiple.survey.num"))
 
 # stages ----
 bird_stages <- birds %>% 
   filter(variable == "stage") %>% 
   select(code, date, multiple.survey.num, species, num.nests = value, stage = znum) %>% 
-  full_join(., select(which_rop, -contains("diff"))) %>% 
+  full_join(., select(which_rop, -contains("diff")), by = c("code", "date", "multiple.survey.num")) %>% 
   mutate(which.rop = ifelse(is.na(which.rop), "other", which.rop))
 
 which_rop <- bird_stages %>% 
@@ -295,7 +292,7 @@ which_rop <- bird_stages %>%
 
 
 
-stages <- left_join(bird_stages, which_rop) %>% 
+stages <- left_join(bird_stages, which_rop, by = c("code", "date", "multiple.survey.num", "which.rop")) %>% 
   mutate(which.rop = ifelse(is.na(which.rop), "other", which.rop)) %>% 
   select(-contains("diff"))
 
@@ -306,7 +303,7 @@ brd_size_dates <- bird_stages %>%
   pivot_wider(id_cols = c(code, species, date, multiple.survey.num), names_from = stage, values_from = num.nests) %>% 
   filter(stage.4 > 0 & stage.5 == 0) %>% 
   group_by(code, species) %>% 
-  summarise(date = max(date)) %>% 
+  summarise(date = max(date), .groups = "drop") %>% 
   mutate(brd.size.date = TRUE)
 
 stage5_dates <- bird_stages %>% 
@@ -318,8 +315,8 @@ bird_brood_sizes <- birds %>%
   filter(variable == "brd") %>% 
   select(code, date, multiple.survey.num, species, num.nests = value, brd = znum) %>% 
   pivot_wider() %>% 
-  full_join(brd_size_dates) %>% 
-  full_join(stage5_dates) %>% 
+  full_join(brd_size_dates, by = c("code", "date", "species")) %>% 
+  full_join(stage5_dates, by = c("code", "date", "species")) %>% 
   arrange(code, species, date)
 
 
@@ -327,6 +324,8 @@ bird_brood_sizes <- birds %>%
 # predators, disturbance, notes details ----
 # for these 3 data types, data come in at the colony level, but when output to Season Summary sheets they are expanded to the colony X species level, and this is how they eventually get input into HEPDATA. Tracking screening changes is easier if these 3 data types are explicitly expanded out to the colony X species level at this stage, rather than relying on implicit expansion at step 2. This expansion is done with the full_join(., distinct(birds, code, species)) call in the final step of each process for these data types
 # predators ----
+oldw <- getOption("warn")
+options(warn = -1)
 predators  <- s123 %>% 
   select(code, date, multiple.survey.num, contains("predator.species")) %>% 
   pivot_longer(cols = contains("pred"), values_to = "predator.species", names_to = "obs.type") %>% 
@@ -334,6 +333,7 @@ predators  <- s123 %>%
   mutate(predator.species = paste(bird_names_from_text(predator.species), get_terrestrial_predators(predator.species), sep = "_")) %>% 
   separate(predator.species, into = paste("pred.sp", seq(1:6), sep = ""), sep = "_") %>% 
   mutate(obs.type = ifelse(grepl("nesting", obs.type), "nesting", "present"))
+options(warn = oldw)
 
 predators_longer <- predators %>% 
   pivot_longer(cols = contains("pred"), values_to = "predator.species") %>% 
@@ -347,7 +347,7 @@ predators_rewide <- predators_longer %>%
   distinct(code, predator.species, obs.type) %>% 
   mutate(yup = 1) %>% 
   pivot_wider(id_cols = c(predator.species, code), names_from = obs.type, values_from = yup) %>% 
-  full_join(., distinct(birds, code, species)) %>% 
+  full_join(., distinct(birds, code, species), by = "code") %>% 
   select(code, species, everything())
 
 # disturbance ----
@@ -372,7 +372,7 @@ disturbance_rewide <- disturbance %>%
   mutate(code = as.numeric(code)) %>% 
   filter(see.signs == "yes") %>% 
   select(-see.signs, -disturbance.num)%>% 
-  full_join(., distinct(birds, code, species)) %>% 
+  full_join(., distinct(birds, code, species), by = "code") %>% 
   select(code, species, everything())
  
 # notes ----
@@ -392,7 +392,7 @@ wide_notes <- s123 %>%
   pivot_longer(cols = contains("notes"), names_to = "note.type", values_to = "notes") %>% 
   filter(!is.na(notes), notes != "", notes != "na") %>% 
   mutate(note.type = gsub(".notes", "", note.type))%>% 
-  full_join(., distinct(birds, code, species)) %>% 
+  full_join(., distinct(birds, code, species), by = "code") %>% 
   select(code, species, everything())
 # combine and write ----
 # sites file created with https://github.com/scottfjennings/HEP_data_work/blob/master/HEP_code/HEP_utility_functions.R

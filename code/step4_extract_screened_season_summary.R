@@ -45,6 +45,7 @@ get_observers_effort <- function(zyear, zfile) {
 # fix date field
 monthday_to_date <- function(zdf) {
   zdf <- zdf %>% 
+    mutate(date = gsub("*", "", date)) %>% 
     separate(date, into = c("date", "multiple.survey.num"), 7) %>% 
     mutate(multiple.survey.num = ifelse(multiple.survey.num == "" | is.na(multiple.survey.num), 1, multiple.survey.num),
            multiple.survey.num = as.numeric(multiple.survey.num)) %>% 

@@ -192,8 +192,7 @@ date2monthday <- function(df) {
   df <- df %>% 
   mutate(date = as.character(date),
          date = gsub(paste(zyear, "-", sep = ""), "", date),
-         date = ifelse(multiple.survey.num > 1, paste(date, multiple.survey.num, sep = "."), date),
-         date = ifelse(complete.count == "no", paste(date, "*", sep = ""), date))
+         date = ifelse(multiple.survey.num > 1, paste(date, multiple.survey.num, sep = "."), date))
 }
 
 monthday_completecount <- function(df) {
@@ -257,6 +256,7 @@ total.nests <- wrangled_s123$nests %>%
   select(species, date, multiple.survey.num, total.nests, complete.count) %>%  
   arrange(date) %>% 
   date2monthday() %>% 
+  monthday_completecount() %>% 
   select(-multiple.survey.num, -complete.count) %>% 
   pivot_wider(values_from = total.nests, names_from = date) %>% 
   mutate(variable = "total.nests") %>% 
@@ -267,6 +267,7 @@ peak_active <- wrangled_s123$nests %>%
   select(species, date, multiple.survey.num, peak.active, complete.count)  %>% 
   arrange(date) %>% 
   date2monthday() %>% 
+  monthday_completecount() %>% 
   select(-multiple.survey.num, -complete.count) %>% 
   pivot_wider(values_from = peak.active, names_from = date) %>% 
   mutate(variable = "peak.active") %>% 
@@ -278,6 +279,7 @@ obs_initials <- wrangled_s123$nests %>%
   select(species, date, multiple.survey.num, obs.initials, complete.count) %>%  
   arrange(date) %>% 
   date2monthday() %>% 
+  monthday_completecount() %>% 
   select(-multiple.survey.num, -complete.count) %>% 
   pivot_wider(values_from = obs.initials, names_from = date) %>% 
   mutate(variable = "obs.initials") %>% 

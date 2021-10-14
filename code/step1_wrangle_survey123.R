@@ -3,6 +3,7 @@
 
 # requires tidyverse; lubridate
 
+# s123 <- wrangled_s123
 
 # read, create data ----
 
@@ -28,7 +29,6 @@ s123 <- s123 %>%
 
 }
 
-
 # code to add test data site info
 # if test data are not added to s_123 in the above read function, then test site data are ignored at left_join where observers_effort created below
 
@@ -36,6 +36,8 @@ s123 <- s123 %>%
 # deal with the funky Survey123 field names ----
 fix_s123_names <- function(s123) {
 colnames(s123) <- gsub("Please.describe.why.you.were.unable.to.complete.colony.count..and.list.which.species.weren.t.adequately.counted.", "incomplete.count.notes", colnames(s123))
+
+colnames(s123) <- gsub("Did.you.make.a.complete.count.of.all.nests.you.could.find.for.the.6.species.above.within.100m.of.the.colony.", "complete.count", colnames(s123))
                        
 s123 <- s123 %>%   
   select(-starts_with(c("X.", "Tally.", "A.nest.is.active", "Re.locate.the", "Please", "Really", "You.have"))) %>% # drop fields that are really just instructions in the survey
@@ -152,7 +154,7 @@ observers_effort <- full_join(seas_summary_observers, effort) %>%
 # dates ----
 
 dates <- s123 %>% 
-  select(date, code, multiple.survey.num, start, end, num.surveys.this.date)
+  select(date, code, multiple.survey.num, start, end, num.surveys.this.date, complete.count)
 
 # determine which ROP each survey date belongs to
 rop_dates <- read.csv("data/rop_dates.csv") %>% 
@@ -164,7 +166,7 @@ rop_dates <- read.csv("data/rop_dates.csv") %>%
   pivot_wider(names_from = rop, values_from = rop.mid)
 
 which_rop <- s123 %>% 
-  select(date, code, multiple.survey.num) %>% 
+  select(date, code, multiple.survey.num, complete.count) %>% 
   mutate(rop.1.dif = as.numeric(date - rop_dates$rop.1),
          rop.2.dif = as.numeric(date - rop_dates$rop.2),
          rop.3.dif = as.numeric(date - rop_dates$rop.3),
@@ -183,11 +185,33 @@ which_rop <- s123 %>%
   filter(abs.diff == min(abs.diff)) %>% 
   ungroup()
 
+if(any(count(which_rop, date, code, multiple.survey.num) > 1)) {
+  
+  tie_cols_dates <- count(which_rop, date, code, multiple.survey.num) %>% 
+    ungroup() %>% 
+    filter(n > 1) %>% 
+    mutate(out.col = paste(code, date, sep = ", ")) %>% 
+    select(out.col) %>% 
+    summarise(out.col = paste(out.col, collapse = "; "))
+  
+  which_rop <- which_rop %>% 
+    mutate(rop.num = gsub("rop.", "", which.rop)) %>% 
+    group_by(date, code, multiple.survey.num) %>% 
+    filter(rop.num == min(rop.num)) %>% 
+    ungroup() %>% 
+    select(-rop.num)
+  
+  
+  print(paste("Note: ROP ties for the following colonies and dates:", tie_cols_dates$out.col))
+} else {
+  which_rop <- which_rop
+}
+
 #
 # bird data ----
 
 birds <- s123 %>% 
-  select(code, date, multiple.survey.num, contains(c("greg", "gbhe", "sneg", "bcnh", "caeg", "dcco")), -starts_with(c("You.have", "Please.fill"))) %>% 
+  select(code, date, multiple.survey.num, contains(c("greg", "gbhe", "sneg", "bcnh", "caeg", "dcco")), complete.count, -starts_with(c("You.have", "Please.fill"))) %>% 
   pivot_longer(contains(c("greg", "gbhe", "sneg", "bcnh", "caeg", "dcco"))) 
 
 
@@ -216,7 +240,7 @@ birds <- birds %>%
 # number nests ----
 bird_total_nests <- birds %>% 
   filter(variable == "total.nests") %>% 
-  select(code, date, multiple.survey.num, species, total.nests = value) 
+  select(code, date, multiple.survey.num, species, total.nests = value, complete.count) 
 
 peak_active <- bird_total_nests %>% 
   group_by(code, species)  %>% 
@@ -265,8 +289,11 @@ which_rop <- bird_stages %>%
   rename(which.rop = name,
          days.diff.rop.mid = value)%>% 
   group_by(date, multiple.survey.num) %>% 
-  filter(abs.diff == min(abs.diff)) %>% 
+  filter(abs.diff == min(abs.diff)) %>%
   ungroup()
+
+
+
 
 stages <- left_join(bird_stages, which_rop) %>% 
   mutate(which.rop = ifelse(is.na(which.rop), "other", which.rop)) %>% 

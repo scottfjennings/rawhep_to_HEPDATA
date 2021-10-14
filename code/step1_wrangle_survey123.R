@@ -137,7 +137,7 @@ effort <- full_join(effort_days, effort_hours_surveys, by = "code")
 
 seas_summary_observers <- observers %>% 
   filter(name != "other") %>% 
-  mutate(name = ifelse(grepl("Recording", role), paste(name, "*", sep = ""), name)) %>% 
+  mutate(name = ifelse(grepl("recording", role), paste(name, "*", sep = ""), name)) %>% 
   distinct(code, name) %>% 
   group_by(code) %>% 
   summarise(observers = paste(name, collapse = "; "), .groups = "drop") %>%

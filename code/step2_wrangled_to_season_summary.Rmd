@@ -207,7 +207,7 @@ monthday_completecount <- function(df) {
 ```{r}
 # make a blank table to record screener initials
 
-screeners <- data.frame(year = zyear,
+screeners <- data.frame(year = as.character(zyear),
                         code = zcode,
                         species = zspp,
                         screener.1 = "not screened",

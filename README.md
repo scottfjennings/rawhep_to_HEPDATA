@@ -45,8 +45,8 @@ date it is decided that the manual screening is not needed, then it will
 be fairly straightforward to eliminate steps 2, 3, and 4. Those steps
 could perhaps be replaced by a single automated screening step. Or, the
 output from step 1 can be used as the input for step 6 if for some
-reason it is decided that no data screening are necessary
+reason it is decided that no data screening is necessary.
 
-wrangled_s123 columns or info not making it through to screened_s123
 
-observers$role predators date of predator observation
+Log of data processing activities so the code versions used each year can be referenced/reused if needed:
+2020 - all processed by 1 Oct 2021

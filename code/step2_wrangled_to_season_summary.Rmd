@@ -195,6 +195,11 @@ date2monthday <- function(df) {
          date = ifelse(multiple.survey.num > 1, paste(date, multiple.survey.num, sep = "."), date))
 }
 
+monthday_completecount <- function(df) {
+    df <- df %>%
+      mutate(date = ifelse(complete.count == "no", paste(date, "*", sep = ""), date))
+}
+
 
 ```
 
@@ -248,20 +253,22 @@ flextable(observers.effort) %>%
 # total nests  
 total.nests <- wrangled_s123$nests %>% 
   filter(code == zcode, species == zspp) %>% 
-  select(species, date, multiple.survey.num, total.nests) %>%  
+  select(species, date, multiple.survey.num, total.nests, complete.count) %>%  
   arrange(date) %>% 
   date2monthday() %>% 
-  select(-multiple.survey.num) %>% 
+  monthday_completecount() %>% 
+  select(-multiple.survey.num, -complete.count) %>% 
   pivot_wider(values_from = total.nests, names_from = date) %>% 
   mutate(variable = "total.nests") %>% 
   select(variable, everything())
 
 peak_active <- wrangled_s123$nests %>% 
   filter(code == zcode, species == zspp) %>% 
-  select(species, date, multiple.survey.num, peak.active)  %>% 
+  select(species, date, multiple.survey.num, peak.active, complete.count)  %>% 
   arrange(date) %>% 
   date2monthday() %>% 
-  select(-multiple.survey.num) %>% 
+  monthday_completecount() %>% 
+  select(-multiple.survey.num, -complete.count) %>% 
   pivot_wider(values_from = peak.active, names_from = date) %>% 
   mutate(variable = "peak.active") %>% 
   select(variable, everything())
@@ -269,10 +276,11 @@ peak_active <- wrangled_s123$nests %>%
 
 obs_initials <- wrangled_s123$nests %>% 
   filter(code == zcode, species == zspp) %>% 
-  select(species, date, multiple.survey.num, obs.initials) %>%  
+  select(species, date, multiple.survey.num, obs.initials, complete.count) %>%  
   arrange(date) %>% 
   date2monthday() %>% 
-  select(-multiple.survey.num) %>% 
+  monthday_completecount() %>% 
+  select(-multiple.survey.num, -complete.count) %>% 
   pivot_wider(values_from = obs.initials, names_from = date) %>% 
   mutate(variable = "obs.initials") %>% 
   select(variable, everything())

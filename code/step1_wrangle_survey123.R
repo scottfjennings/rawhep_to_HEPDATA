@@ -109,7 +109,7 @@ wrangle_s123 <- function(s123) {
 
 observers <- s123 %>% 
   select(code, date, multiple.survey.num, contains("observer")) %>% 
-  pivot_longer(cols = contains("Observer"), names_to = "role", values_to = "name") %>% 
+  pivot_longer(cols = contains("observer"), names_to = "role", values_to = "name") %>% 
   filter(!is.na(name), name != "") %>% 
   arrange(code, date)
 

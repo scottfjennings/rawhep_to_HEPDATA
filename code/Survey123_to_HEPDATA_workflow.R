@@ -14,20 +14,23 @@ source_url("https://github.com/scottfjennings/Survey123_to_HEPDATA/blob/main/cod
 
 source("C:/Users/scott.jennings/Documents/Projects/R_general/utility_functions/bird_utility_functions.R")
 
-zyear = 2020
+zyear = 2021
 #
 # step 1, convert Survey123 data to more-usable format ----
 # source(here("code/step1_wrangle_survey123.R"))
 
 source_url("https://github.com/scottfjennings/Survey123_to_HEPDATA/blob/main/code/step1_wrangle_survey123.R?raw=TRUE")
 
-wrangled_s123 <- read_s123(zyear, zversion = "Final", add.test.data = TRUE) %>% 
+wrangled_s123 <- read_s123(zyear, zversion = "0", add.test.data = FALSE) %>% 
   filter(useforsummary == "y") %>% 
   fix_s123_names() %>% 
-  fix_s123_date_fields(zformat = "%m/%d/%Y %H:%M") %>% 
+  fix_s123_date_fields() %>% 
   add_multiple_survey_num() %>% 
   wrangle_s123()
-  
+
+# check for message about ROP ties
+
+
 wrangled_s123 %>% saveRDS(here(paste("data/wrangled/wrangled_s123", zyear, sep = "_")))
  
 # step 1.1, check for any data issues, and data summary helpers to prepare for manual screening ----
@@ -84,7 +87,7 @@ check_expected_observers(zyear) %>% # from survey123_utility_functions.R
 colony_spp_need_sheet <- get_colony_spp_need_sheet(zyear)
 
 # create season summary sheet for single colony X species
-render_season_summary(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = 2020, zcode = 599, zspp = "GREG")
+render_season_summary(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = 2021, zcode = 16, zspp = "GREG")
 
 # create season summary sheet for all colony X species that don't yet have a sheet
 # if testing, can further subset colony_spp_need_sheet, here just doing the test data

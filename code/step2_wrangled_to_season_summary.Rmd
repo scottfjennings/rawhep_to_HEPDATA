@@ -424,7 +424,9 @@ brood_sizes_wide <- brood_sizes %>%
 } else {
   brood_sizes_wide <- data.frame(code = zcode,
                                  species = zspp,
+                                 date = NA,
                                  brd.size.date = NA,
+                                 stage5.nests = NA,
                                  brd.1 = NA,
                                  brd.2 = NA,
                                  brd.3 = NA,

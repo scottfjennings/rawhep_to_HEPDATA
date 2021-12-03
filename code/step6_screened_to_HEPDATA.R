@@ -29,19 +29,36 @@ effort <- screened_s123$observers.effort %>%
 
 # 10  PEAKACTVNSTS ----
 
-peakactvnsts <- filter(screened_s123$nests, peak.active == 1) %>% 
+peakactvnsts.gr0 <- screened_s123$nests %>% 
+  filter(peak.active == 1) %>% 
   select(CODE = code, SPECIES = species, PEAKACTVNSTS = total.nests) %>% 
   mutate(YEAR = zyear)
 
-HEPDATA_out <- full_join(effort, peakactvnsts)
+peakactvnsts.0 <- screened_s123$nests %>%
+  group_by(code, species) %>% 
+  summarise(peakactvnsts = sum(peak.active)) %>% 
+  filter(peakactvnsts == 0) %>% 
+  select(CODE = code, SPECIES = species, PEAKACTVNSTS = peakactvnsts) %>% 
+  mutate(YEAR = zyear)
+
+peakactvnsts_out <- rbind(peakactvnsts.gr0, peakactvnsts.0)
+
+HEPDATA_out <- full_join(effort, peakactvnsts_out)
 # 11-13 (-16?) no longer collected, these added with NA at the end ----
 # 11   INDIVIDUALS
 # 12    FOCALNESTS
 # 13    FOCFAILURE
 # 14   DISTURBANCE
 # 15        SOURCE
-# 16         NOTES
 
+
+# 16         NOTES ----
+notes <- screened_s123$notes %>% 
+  filter(note.type == "for.HEPDATA", notes != "", !is.na(notes)) %>% 
+  select(CODE = code, SPECIES = species, NOTES = notes) %>% 
+  mutate(YEAR = zyear)
+
+HEPDATA_out <- full_join(HEPDATA_out, notes)
 
 # stage 4 brood sizes ----
 # 17 BRD1; # 18 BRD2; # 19 BRD3; # 20 BRD4; # 21 BRD5; # 22 BRD6
@@ -111,6 +128,8 @@ HEPDATA_out <- full_join(HEPDATA_out, rop_dates_nests)
 # 65 DIST1DATE; # 66 DIST1TYPE; # 67 DIST1RESULT; # 68 DIST2DATE; # 69 DIST2TYPE; # 70 DIST2RESULT; # 71 DIST3DATE; # 72 DIST3TYPE; # 73 DIST3RESULT; # 74 DIST4DATE; # 75 DIST4TYPE; # 76 DIST4RESULT; # 77 DIST5DATE; # 78 DIST5TYPE; # 79 DIST5RESULT; # 80 DIST6DATE; # 81 DIST6TYPE; # 82 DIST6RESULT; # 83; DIST7DATE; # 84 DIST7TYPE; # 85 DIST7RESULT; # 86 DIST8DATE; # 87 DIST8TYPE; # 88 DIST8RESULT; # 89 DIST9DATE; # 90 DIST9TYPE; # 91 DIST9RESULT
 
 disturbance <- screened_s123$disturbance %>% 
+  mutate(result = tolower(result)) %>% 
+  filter(!grepl("x", result)) %>% 
   group_by(code, species) %>% 
   arrange(code, species, date) %>% 
   mutate(dist.num = row_number()) %>% 
@@ -154,15 +173,19 @@ predators <- screened_s123$predators %>%
 # 98 Entry_Proofed
 # 99    Entered_By
 
-HEPDATA_out <- full_join(HEPDATA_out, predators) %>% 
-  mutate(Entry_Proofed = "",
-         Entered_By = "") %>% 
-  full_join(., readRDS("data/HEPDATA_names") %>% 
+
+hepdata_names <- readRDS("data/HEPDATA_names") %>% 
               data.frame() %>% 
               rename(colname = 1) %>% 
               mutate(blah = NA) %>% 
-              pivot_wider(values_from = blah, names_from = colname)) %>% 
-  filter(!is.na(CODE))
+              pivot_wider(values_from = blah, names_from = colname)
+
+HEPDATA_out <- full_join(HEPDATA_out, predators) %>% 
+  mutate(Entry_Proofed = "",
+         Entered_By = "") %>% 
+  full_join(., hepdata_names) %>% 
+  filter(!is.na(CODE)) %>% 
+  select(names(hepdata_names))
 
 return(HEPDATA_out)
 }

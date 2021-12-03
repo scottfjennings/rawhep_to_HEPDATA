@@ -66,7 +66,7 @@ to as data groups. Each data group requires different procedures and
 manipulations downstream in the workflow.
 
 ``` r
-wrangled_s123 <- read_s123(zyear, zversion, add.test.data = FALSE) %>% 
+wrangled_s123 <- read_s123(zyear, add.test.data = FALSE) %>% 
   filter(useforsummary == "y") %>% # 
   fix_s123_names() %>% 
   fix_s123_date_fields() %>% 

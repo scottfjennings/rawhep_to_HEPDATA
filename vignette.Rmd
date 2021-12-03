@@ -47,13 +47,20 @@ source(here("code/step1_wrangle_survey123.r"))
 
  
 This step fixes field names and date fields, adds a helper column to indicate where multiple surveys happened on the same date, then finally splits the data into different "types" (e.g. total nest numbers, predator observations, etc.). These groups of "like" data are referred to as data groups. Each data group requires different procedures and manipulations downstream in the workflow.
-```{r}
-wrangled_s123 <- read_s123(zyear, zversion, add.test.data = FALSE) %>% 
+
+
+```{r eval=FALSE, message=FALSE}
+wrangled_s123 <- read_s123(zyear, add.test.data = FALSE) %>% 
   filter(useforsummary == "y") %>% # 
   fix_s123_names() %>% 
   fix_s123_date_fields() %>% 
   add_multiple_survey_num() %>% 
   wrangle_s123()
+```
+
+
+```{r echo=FALSE, eval=TRUE}
+# wrangled_s123 <- readRDS(paste("data/wrangled/wrangled_s123", zyear, sep = "_"))
 ```
 
 
@@ -147,17 +154,19 @@ colony_spp_need_sheet <- get_colony_spp_need_sheet(zyear)
 
 The colony_spp_need_sheet object has the colony and species fields for purrr::map to iterate over to create each sheet.
 
-```{r}
+```{r eval=FALSE}
 pmap(.l = list(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = colony_spp_need_sheet$year, zcode = colony_spp_need_sheet$code, zspp = colony_spp_need_sheet$species), .f = render_season_summary)
 ```
 
 Note: you can generate a Season Summary Sheet for a single species X colony instance by specifying species and colony in the call to render_season_summary:
-```{r}
+
+```{r eval=FALSE}
 render_season_summary(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = 2021, zcode = 58, zspp = "BCNH")
 ```
 
 Or all species for a single colony:
-```{r}
+
+```{r eval=FALSE}
 pmap(.l = list(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = 2021, zcode = 16, zspp = c("GBHE", "GREG", "SNEG", "BCNH", "CAEG", "DCCO")), .f = render_season_summary)
 
 ```
@@ -175,7 +184,7 @@ This renaming helps prevent accidental overwriting of already screened summary s
    
 ## Step 4, extract tables from screened Season Summary Sheets
 This step uses functions in extract_screened_season_summary.R
-```{r}
+```{r, message=FALSE}
 source(here("code/step4_extract_screened_season_summary.r"))
 ```
   
@@ -188,7 +197,8 @@ Create a list of Season Summary Sheets that have been screened (requires file re
 There are separate functions in step4_extract_screened_season_summary.r for each data group. These functions loop through each .docx file and extract the pertinent table, then assemble those into a single data frame. Bundling those data frames into a list brings the data back to the same structure and names as wrangled_s123, so that a log of screening changes can be easily made (step 5)
 Note, running the code below will overwrite any previous version of screened_s123, it will not append new records to the previous version. This generally shouldn't be a problem (I can't think of a realistic scenario), but it is something to be aware of.  
 Also note that messages about "the condition having length > 1" are OK and can be ignored
-```{r}
+
+```{r message=FALSE}
 screened_s123 <- list(screen.log = map2_df(zyear, screened_seas_summ_files, get_screening_log),
                       observers.effort = map2_df(zyear, screened_seas_summ_files, get_observers_effort),
                       nests = map2_df(zyear, screened_seas_summ_files, get_total_nest_table),

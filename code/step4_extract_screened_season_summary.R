@@ -134,6 +134,7 @@ stages <- full_join(nest_stages_rop %>%
 
 # brood sizes ----
 get_stage4brd <- function(zyear, zfile) {
+  # only look for stage 4 info for GBHE and GREG
 if(grepl("GREG|GBHE", zfile)){
     doc <- read_docx(paste("season_summary_forms/", zyear, "/", zfile, sep = ""))
   extr_doc <- docx_extract_all_tbls(doc)
@@ -141,9 +142,10 @@ if(grepl("GREG|GBHE", zfile)){
   stage4brd <- stage4brd %>% 
     rename_all(~sub("brd.date", "brd.size.date", .x))
 
-  if(nrow(stage4brd) == 1 & stage4brd$brd.size.date == "NA") {
+  # if species == GBHE or GREG but no stage 4 info, return null
+  if(nrow(stage4brd) == 1 & (stage4brd$brd.size.date == "NA" | stage4brd$brd.size.date == "")) {
     stage4brd = NULL
-  } else {
+  } else { # else pivot the stage info back to long format
   stage4brd <- stage4brd %>% 
     pivot_longer(cols = c(paste("brd", seq(1, 5), sep = ".")), names_to = "brd", values_to = "num.nests") %>%
     mutate(brd = gsub("brd.", "", brd)) %>% 
@@ -157,7 +159,7 @@ if(grepl("GREG|GBHE", zfile)){
 
 # all_stage4brd <- map2(zyear, screened_seas_summ_files[1:14], safely(get_stage4brd)) 
 
-# get_stage4brd(zyear, screened_seas_summ_files[3]) %>% view()
+# zzz <- get_stage4brd(zyear, screened_seas_summ_files[1]) %>% view()
 
 # disturbance ----
  get_disturbance <- function(zyear, zfile) {

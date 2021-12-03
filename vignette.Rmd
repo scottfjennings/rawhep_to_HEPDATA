@@ -28,13 +28,15 @@ This script relies heavily on the pipe operator and on the purrr::map family of 
 load the required packages, source the utility functions code file, and indicate the year you will be processing.
 ```{r, message=FALSE}
 library(tidyverse)
+library(lubridate)
 library(here)
+library(birdnames)
 
 source(here("code/survey123_utility_functions.r"))
 
-source("C:/Users/scott.jennings/Documents/Projects/R_general/utility_functions/bird_utility_functions.R")
+zyear = 2021
 
-zyear = 2020
+zversion = 102
 ```
 
 ## Step 1, convert Survey123 data to more-usable format.
@@ -46,7 +48,7 @@ source(here("code/step1_wrangle_survey123.r"))
  
 This step fixes field names and date fields, adds a helper column to indicate where multiple surveys happened on the same date, then finally splits the data into different "types" (e.g. total nest numbers, predator observations, etc.). These groups of "like" data are referred to as data groups. Each data group requires different procedures and manipulations downstream in the workflow.
 ```{r eval=FALSE, message=FALSE}
-wrangled_s123 <- read_s123(zyear, add.test.data = TRUE) %>% 
+wrangled_s123 <- read_s123(zyear, add.test.data = FALSE) %>% 
   filter(useforsummary == "y") %>% # 
   fix_s123_names() %>% 
   fix_s123_date_fields() %>% 
@@ -55,7 +57,7 @@ wrangled_s123 <- read_s123(zyear, add.test.data = TRUE) %>%
 ```
 
 ```{r echo=FALSE, eval=TRUE}
-wrangled_s123 <- readRDS(paste("data/wrangled/wrangled_s123", zyear, sep = "_"))
+# wrangled_s123 <- readRDS(paste("data/wrangled/wrangled_s123", zyear, sep = "_"))
 ```
 
 The result of these functions is a list, with the elements of the list being dataframes for each data group.
@@ -95,7 +97,7 @@ If there are records in the resulting object, go back and fix in Survey123
 Check which species have nested in each colony. This can help the screener see if any unexpected species are nesting in a given colony, or if a species has disappeared from a colony.
 # for 1, a few, or all colonies, check which species have nested there and peak active nests for each year.
 ```{r}
-check_nesting_history(2020, c(53), screened.s123 = FALSE) %>% # from survey123_utility_functions.R
+check_nesting_history(2021, c(53), screened.s123 = FALSE) %>% # from survey123_utility_functions.R
   pivot_wider(id_cols = c(code, site.name, year), values_from = total.nests, names_from = species) %>% 
   view()
 ```
@@ -149,16 +151,24 @@ colony_spp_need_sheet <- get_colony_spp_need_sheet(zyear)
 The colony_spp_need_sheet object has the colony and species fields for purrr::map to iterate over to create each sheet.
 
 ```{r eval=FALSE}
-pmap(.l = list(file = here("code/step2_wrangled_s123_to_season_summary.Rmd"), zyear = colony_spp_need_sheet$year, zcode = colony_spp_need_sheet$code, zspp = colony_spp_need_sheet$species), .f = render_season_summary)
+pmap(.l = list(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = colony_spp_need_sheet$year, zcode = colony_spp_need_sheet$code, zspp = colony_spp_need_sheet$species), .f = render_season_summary)
 ```
 
 Note: you can generate a Season Summary Sheet for a single species X colony instance by specifying species and colony in the call to render_season_summary:
 ```{r eval=FALSE}
-render_season_summary(file = here("code/step2_wrangled_s123_to_season_summary.Rmd"), zyear = 2020, zcode = 599, zspp = "GREG")
+render_season_summary(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = 2021, zcode = 58, zspp = "BCNH")
+```
+
+Or all species for a single colony:
+```{r eval=FALSE}
+pmap(.l = list(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = 2021, zcode = 16, zspp = c("GBHE", "GREG", "SNEG", "BCNH", "CAEG", "DCCO")), .f = render_season_summary)
+
 ```
 
 
 ## Step 3, NO CODE - MANUALLY SCREEN SEASON SUMMARY SHEETS.
+
+UPdate 2021-12-02: For now we are not renaming files.
 
  * When a sheet has been screened the first time, change its name from [code]_[year]_[species].docx to [code]_[year]_[species]_screened1.docx
  * If a sheet is screened a second time, change its name from [code]_[year]_[species]_screened1.docx to [code]_[year]_[species]_screened2.docx
@@ -168,18 +178,19 @@ This renaming helps prevent accidental overwriting of already screened summary s
    
 ## Step 4, extract tables from screened Season Summary Sheets
 This step uses functions in extract_screened_season_summary.R
-```{r}
+```{r, message=FALSE}
 source(here("code/step4_extract_screened_season_summary.r"))
 ```
   
 Create a list of Season Summary Sheets that have been screened (requires file renaming in step 3).
 ```{r}
-  screened_seas_summ_files <- list.files(paste("season_summary_forms/", zyear, "/", sep = ""), pattern = "screened")
+  screened_seas_summ_files <- list.files(paste("season_summary_forms/", zyear, "/", sep = ""))
 ```
 
 
 There are separate functions in step4_extract_screened_season_summary.r for each data group. These functions loop through each .docx file and extract the pertinent table, then assemble those into a single data frame. Bundling those data frames into a list brings the data back to the same structure and names as wrangled_s123, so that a log of screening changes can be easily made (step 5)
 Note, running the code below will overwrite any previous version of screened_s123, it will not append new records to the previous version. This generally shouldn't be a problem (I can't think of a realistic scenario), but it is something to be aware of.  
+Also note that messages about "the condition having length > 1" are OK and can be ignored
 ```{r message=FALSE}
 screened_s123 <- list(screen.log = map2_df(zyear, screened_seas_summ_files, get_screening_log),
                       observers.effort = map2_df(zyear, screened_seas_summ_files, get_observers_effort),
@@ -213,21 +224,21 @@ As with step 4, a function is called for each data group, and the results are co
 ```{r message=FALSE}
 track_changes_s123 <- list(screen.log = readRDS(here(paste("data/screened/screened_s123_", zyear, sep = "")))[["screen.log"]],
                            observers.effort = make_track_change_tables(zyear, "observers.effort"),
-                           nests = make_track_change_tables(zyear, "nests") %>% 
+                           nests = make_track_change_date_tables(zyear, "nests") %>% 
                              mutate(date = as.Date(date)) %>% 
                              arrange(code, species, date),
-                           stages = make_track_change_tables(zyear, "stages") %>% 
+                           stages = make_track_change_date_tables(zyear, "stages") %>% 
                              mutate(date = as.Date(date)) %>% 
                              arrange(code, species, date),
-                           brood.sizes = make_track_change_tables(zyear, "brood.sizes") %>% 
+                           brood.sizes = make_track_change_date_tables(zyear, "brood.sizes") %>% 
                              mutate(date = as.Date(date)) %>% 
                              arrange(code, species, date),
                            predators = make_track_change_tables(zyear, "predators") %>% 
                              arrange(code, species, predator.species),
-                           disturbance = make_track_change_tables(zyear, "disturbance") %>% 
+                           disturbance = make_track_change_date_tables(zyear, "disturbance") %>% 
                              mutate(date = as.Date(date)) %>% 
                              arrange(code, species, date),
-                           notes = make_track_change_tables(zyear, "notes") %>% 
+                           notes = make_track_change_date_tables(zyear, "notes") %>% 
                              mutate(date = as.Date(date)) %>% 
                              arrange(code, species, date)
 )
@@ -278,6 +289,7 @@ Finally, save HEPDATA for appending to the HEPDATA access database.
 ```{r}
 saveRDS(HEPDATA, here(paste("data/as_HEPDATA/HEPDATA_", zyear, sep = "")))
 
+write.csv(HEPDATA, here(paste("data/as_HEPDATA/HEPDATA_", zyear, ".csv", sep = "")), row.names = FALSE)
 
 ```
 

@@ -42,7 +42,7 @@ library(lubridate)
 library(here)
 library(birdnames)
 
-source(here("code/survey123_utility_functions.r"))
+source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/survey123_utility_functions.R")
 
 zyear = 2021
 
@@ -55,7 +55,7 @@ This step uses functions from step1\_wrangle\_survey123.R, which can be
 piped together into a single process.
 
 ``` r
-source(here("code/step1_wrangle_survey123.r"))
+source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step1_wrangle_survey123.R")
 ```
 
 This step fixes field names and date fields, adds a helper column to
@@ -229,7 +229,7 @@ folder still need to be screened.
 This step uses functions in extract\_screened\_season\_summary.R
 
 ``` r
-source(here("code/step4_extract_screened_season_summary.r"))
+source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step4_extract_screened_season_summary.r")
 ```
 
 Create a list of Season Summary Sheets that have been screened (requires
@@ -287,7 +287,7 @@ This step uses functions defined in
 step5\_make\_screening\_change\_log.R
 
 ``` r
-source(here("code/step5_make_screening_change_log.R"))
+source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step5_make_screening_change_log.R")
 ```
 
 As with step 4, a function is called for each data group, and the
@@ -358,7 +358,7 @@ HEPDATA is a “wide” data structure, and has field names in ALLCAPS. Thus
 this comprises a bunch of reshaping and renaming.
 
 ``` r
-source(here("code/step6_screened_to_HEPDATA.R"))
+source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step6_screened_to_HEPDATA.R")
 
 HEPDATA <- screened_to_HEPDATA(zyear)
 

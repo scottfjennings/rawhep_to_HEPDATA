@@ -32,7 +32,7 @@ library(lubridate)
 library(here)
 library(birdnames)
 
-source(here("code/survey123_utility_functions.r"))
+source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/survey123_utility_functions.R")
 
 zyear = 2021
 
@@ -42,7 +42,7 @@ zversion = 102
 ## Step 1, convert Survey123 data to more-usable format.
 This step uses functions from step1_wrangle_survey123.R, which can be piped together into a single process.
 ```{r}
-source(here("code/step1_wrangle_survey123.r"))
+source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step1_wrangle_survey123.R")
 ```
 
  
@@ -180,7 +180,7 @@ This renaming helps prevent accidental overwriting of already screened summary s
 ## Step 4, extract tables from screened Season Summary Sheets
 This step uses functions in extract_screened_season_summary.R
 ```{r}
-source(here("code/step4_extract_screened_season_summary.r"))
+source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step4_extract_screened_season_summary.r")
 ```
   
 Create a list of Season Summary Sheets that have been screened (requires file renaming in step 3).
@@ -219,7 +219,7 @@ The logic for this step is based on merging pre-screened and screened data. Wher
 
 This step uses functions defined in step5_make_screening_change_log.R
 ```{r}
-source(here("code/step5_make_screening_change_log.R"))
+source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step5_make_screening_change_log.R")
 ```
 
 As with step 4, a function is called for each data group, and the results are combined into a list. Here the function is a simple join that could be generalized for all data groups, so the same function is called for all data groups. 
@@ -280,7 +280,7 @@ saveRDS(track_changes_s123, here(paste("data/track_changes/track_changes_s123_",
 HEPDATA is a "wide" data structure, and has field names in ALLCAPS. Thus this comprises a bunch of reshaping and renaming. 
 
 ```{r}
-source(here("code/step6_screened_to_HEPDATA.R"))
+source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step6_screened_to_HEPDATA.R")
 
 HEPDATA <- screened_to_HEPDATA(zyear)
 

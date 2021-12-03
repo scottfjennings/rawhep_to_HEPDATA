@@ -87,7 +87,7 @@ check_expected_observers(zyear) %>% # from survey123_utility_functions.R
 colony_spp_need_sheet <- get_colony_spp_need_sheet(zyear)
 
 # create season summary sheet for single colony X species
-render_season_summary(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = 2021, zcode = 16, zspp = "GREG")
+render_season_summary(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = 2021, zcode = 50.2, zspp = "GREG")
 
 # create season summary sheet for all colony X species that don't yet have a sheet
 # if testing, can further subset colony_spp_need_sheet, here just doing the test data

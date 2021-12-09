@@ -182,7 +182,7 @@ hepdata_names <- readRDS("data/HEPDATA_names") %>%
 
 HEPDATA_out <- full_join(HEPDATA_out, predators) %>% 
   mutate(Entry_Proofed = "",
-         Entered_By = "") %>% 
+         Entered_By = paste("code-generated record.", Sys.Date())) %>% 
   full_join(., hepdata_names) %>% 
   filter(!is.na(CODE)) %>% 
   select(names(hepdata_names))

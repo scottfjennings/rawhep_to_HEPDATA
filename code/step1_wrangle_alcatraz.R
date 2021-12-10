@@ -181,3 +181,175 @@ return(hep_checks)
 
 alcatraz_checks_stages <- alcatraz_assign_stage(alcatraz_checks)
 
+alcatraz_checks_stages <- alcatraz_checks_stages %>% 
+  rename(species = spp)
+# now converting to wrangled format ----
+# first the dates table ----
+# "date"
+# "code"
+# "multiple.survey.num"
+# "start"
+# "end"
+# "num.surveys.this.date"
+# "complete.count" 
+
+dates <- alcatraz_checks_stages %>% 
+  distinct(date, species) %>% 
+  mutate(code = 70,
+         multiple.survey.num = "",
+         start = NA,
+         end = NA,
+         num.surveys.this.date = NA,
+         complete.count = NA)
+
+
+# then observers.effort ----
+# "code"
+# "colony"
+# "observers"
+# "total.days"
+# "total.surveys"
+# "total.hours"
+
+observers_effort <- alcatraz_checks_stages %>% 
+  distinct(date, species) %>% 
+  count(species) %>% 
+  rename(total.days = n) %>% 
+  mutate(code = 70,
+         colony = "Alcatraz",
+         observers = NA,
+         total.surveys = total.days,
+         total.hours = NA)
+
+
+
+# nests ----
+# "code"
+# "date"
+# "multiple.survey.num"
+# "species"
+# "total.nests"
+# "complete.count"
+# "peak.active"
+# "obs.initials"
+
+nests <- alcatraz_checks_stages %>% 
+  filter(!is.na(stage)) %>% 
+  count(date, species, name = "total.nests") %>% 
+  group_by(species) %>% 
+  mutate(peak.active = ifelse(total.nests == max(total.nests), TRUE, FALSE),
+         code = 70,
+         multiple.survey.num = 1,
+         complete.count = NA,
+         obs.initial = NA) %>% 
+  arrange(species, date)
+  
+  
+
+
+# stages ----
+# no stages for BCNH, SNEG
+
+
+# brood.sizes ----
+# no brood sizes for BCNH, SNEG
+
+
+
+# for predators, disturbance and notes ----
+all_notes <- alcatraz_checks_stages %>% 
+  filter(!is.na(notes)) %>% 
+  distinct(date, species, notes) %>% view()
+
+
+# predators ----
+# "code"
+# "date"
+# "multiple.survey.num"
+# "species"
+# "predator.species"
+# "present"
+# "nesting"
+
+# if notes suggest predators, run this and change predator.note to 1 for that record and fill in predator.species, present and nesting as appropriate:
+predators <- all_notes %>% 
+  mutate(predator.note = 0,
+         predator.species = "",
+         present = "",
+         nesting = "",
+         code = 70,
+         multiple.survey.num = 1) %>% 
+  edit()
+
+predators <- predators %>% 
+  filter(predator.note == 1) %>% 
+  select(-predator.note)
+  
+# if no predators:
+predators = NULL
+
+# disturbance ----
+# "code"
+# "date"
+# "multiple.survey.num"
+# "species"
+# "obs.inf"
+# "type"
+# "result"
+# "description"
+
+
+# if notes suggest predators, run this and change predator.note to 1 for that record and fill in obs.inf, type, result, and description as appropriate:
+disturbance <- all_notes %>% 
+  mutate(disturbance.note = 0,
+         obs.inf = "",
+         type = "",
+         result = "",
+         description = "",
+         code = 70,
+         multiple.survey.num = 1) %>% 
+  edit()
+# then keep just the good records
+disturbance <- disturbance %>% 
+  filter(disturbance.note == 1) %>% 
+  select(-disturbance.note)
+  
+# if no disturbance:
+  disturbance = NULL
+
+
+# notes ----
+# "code"
+# "date"
+# "multiple.survey.num"
+# "species"
+# "note.type"
+# "notes"
+
+
+# if there are pertinent notes to keep, run this and change keep.note to 1 for that record and fill in note.type and edit the note as appropriate:
+disturbance <- all_notes %>% 
+  mutate(keep.note = 0,
+         note.type = "",
+         code = 70,
+         multiple.survey.num = 1) %>% 
+  edit()
+# then keep just the good records
+notes <- notes %>% 
+  filter(keep.note == 1) %>% 
+  select(-keep.note)
+# if no notes:
+notes = NULL
+
+wrangled_alcatraz <- list(dates = dates,
+                      observers.effort = observers_effort,
+                      nests = nests,
+                      stages = NULL,
+                      brood.sizes = NULL,
+                      predators = predators,
+                      disturbance = disturbance,
+                      notes = notes)
+
+wrangled_alcatraz %>% 
+  saveRDS(here("data/wrangled/wrangled_alcatraz_2021"))
+

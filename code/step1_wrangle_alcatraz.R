@@ -23,19 +23,6 @@ library(here)
 all_checks_usgs <- read.xlsx(here("data/alcatraz/70_Alcatraz_2021databackupSNG,BCNH.xlsx"), sheetIndex = "Visits", startRow = 3)
 
 
-#--------------------------------------------------------
-
-alcatraz_nest_infoer <- function(sp.df){
-  # next a function to extract info on nest characteristics
-  # most of this info is stuff that's not normally collected as part of the HEP protocol, but here's a function to pull it out in case its needed sometime
-  # INPUT: "sp.df" is the data frame for a particular species, that we just created with "alcatraz_reader"
-nest.info <- sp.df %>% 
-  select(NO., Obs., SPP, Colony, Type, Hgt..ft., Easting, Northing, plus.minus..ft.)
-return(nest.info)
-}
-
-#sneg_info <- alcatraz_nest_infoer(sneg)
-#bcnh_info <- alcatraz_nest_infoer(bcnh)
 
 #--------------------------------------------------------
 

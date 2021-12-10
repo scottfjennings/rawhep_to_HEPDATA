@@ -55,7 +55,7 @@ distinct(alcatraz_checks, notes) %>% view()
 
 alcatraz_checks <- alcatraz_checks %>% 
   filter(spp != "PASS") 
-
+#
 ## extract usefull info from notes ----
 
 notes_extracter <- function(sp_checks){
@@ -150,89 +150,34 @@ trim_keepers <- function(sp_checks_extracted){
 all_checks_trimmed <- trim_keepers(all_checks_extracted)
 all_checks_trimmed <- trim_keepers(all_checks_extracted_edited)
 
-#--------------------------------------------------------
+# assign nest stage -----
 
-alcatraz2HEPer <- function(sp_checks){
+alcatraz_assign_stage <- function(sp_checks){
   # finally convert check data from the Alcatraz format (massaged by above functions) to the HEP_screening format, including addition and filling of HEP-specific fields (status, stage, confidence)
   # note that there are some species-specific assumptions built in to the generation of Stage
   # if GREG or GBHE ever nest on Alcatraz the assignment of stages in this function will need to be changed to include stage 3
 
 # create a small df with some of the nest stage boundaries
-stages <- data.frame(SPP = as.character(c("BCNH", "SNEG")),
+stages <- data.frame(spp = as.character(c("BCNH", "SNEG")),
                      end.stg2 = c(10, 10),
                      end.stg4 = c(15, 14))  
 
-zsp_checks <- sp_checks %>% 
-  left_join(., stages, by = c("SPP"))
+zsp_checks <- alcatraz_checks %>% 
+  left_join(., stages, by = c("spp"))
 
 
 
 # now the meat of the function to generate the HEP_screening data structure
 
-hep_checks <- zsp_checks %>%
-  setNames(tolower(names(.))) %>% 
-  rename(ch.age = age) %>% 
-  mutate(date = ymd(date),
-         adults=as.numeric(""),
-         stage = as.numeric(""),
+hep_checks <- zsp_checks %>% 
+  mutate(stage = as.numeric(""),
          stage = ifelse((chick == 0 | is.na(chick)) & egg > 0, 1, stage),
-         stage = ifelse(chick > 0 & !is.na(chick) & ch.age <= end.stg2, 2, stage),
-         stage = ifelse(chick > 0 & !is.na(chick) & ch.age > end.stg2 & ch.age < end.stg4, 4, stage),
-         stage = ifelse(chick > 0 & !is.na(chick) & ch.age > end.stg4, 5, stage),
-         confidence = "",
-         status = "A",
-         status = ifelse(egg == 0 & chick == 0, "I", status),
-         status = ifelse(egg == 0 & is.na(chick), "I", status),
-         status = ifelse(is.na(egg) & chick == 0, "I", status),
-         status = ifelse(notes == "not checked" & !is.na(notes) |
-                        (egg == 9 & chick == 9) |
-                        (egg == 9 & is.na(chick)) |
-                        (is.na(egg) & chick == 9), "P", status)) %>% 
-  select(date, nest = no., spp, status, adults, stage, chicks = chick, confidence, notes) %>% 
-  arrange(nest, spp, date) %>% 
-  unique() 
+         stage = ifelse(chick > 0 & !is.na(chick) & age <= end.stg2, 2, stage),
+         stage = ifelse(chick > 0 & !is.na(chick) & age > end.stg2 & age <= end.stg4, 4, stage),
+         stage = ifelse(chick > 0 & !is.na(chick) & age > end.stg4, 5, stage)) 
 return(hep_checks)
 }
 
 
-alc_hep <- alcatraz2HEPer(all_checks_trimmed)
-
-## as a quick check to make sure 'stage' and 'status' have been filled correctly, these filters should return 0 records
-filter(alc_hep, status == "A", is.na(stage), is.na(chicks)) # there should be no records with status == "A" but no data for stage or chicks
-filter(alc_hep, status == "I", !is.na(stage)) # there should be no records with status == "I" and valid data for stage
-filter(alc_hep, status == "I", stage > 0, chicks > 0) # there should be no records with status == "I" and valid data for stage and chicks
-
-year <- 2017
-char_date <- as.Date(Sys.time()) %>% as.character() %>% gsub("-", "", .)
-file.path <- paste("Alcatraz_ready4screening/alcatraz", year, "_4screening_codeV", code_version, "_", char_date, ".csv", sep = "")
-write.csv(alc_hep, file.path, row.names = F)
-###
-
-alc_hep <- read.csv("Alcatraz_ready4screening/alcatraz2018_4screening20190908.csv")
-
-nest_viewer <- function(zspp, znest, znest.exact = FALSE) {
-  if(znest.exact == FALSE) {
-  alc_hep %>% 
-    filter(spp == zspp & grepl(znest, nest)) %>% 
-    arrange(date)
-  } else {
-      alc_hep %>% 
-    filter(spp == zspp, nest == znest) %>% 
-    arrange(date)
-  }
-}
-
-
-nest_viewer_all_checks <- function(zspp, znest, znest.exact = FALSE) {
-  if(znest.exact == FALSE) {
-  all_checks %>% 
-    filter(SPP == zspp & grepl(znest, NO.)) %>% 
-    arrange(DATE)
-  } else {
-      all_checks %>% 
-    filter(SPP == zspp, NO. == znest) %>% 
-    arrange(DATE)
-  }
-}
-
+alcatraz_checks_stages <- alcatraz_assign_stage(alcatraz_checks)
 

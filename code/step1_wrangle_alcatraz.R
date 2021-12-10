@@ -16,6 +16,7 @@ library(tidyverse)
 library(lubridate)
 library(xlsx)
 library(stringr)
+library(here)
 code_version = 1.6
 
 alcatraz_reader_xlsx <- function(year, worksheet, filename){
@@ -25,13 +26,13 @@ alcatraz_reader_xlsx <- function(year, worksheet, filename){
   # if all species are combined on the same sheet, then the function only needs to be called once
   # reading directly from the xlsx is slow but works fine, and is a more streamlined process than saving the xlsx's as csv's before importing to R
   if(missing(filename)) {
-    filepath <- paste("data_from_USGS/Alcatraz", year, "data_FINAL.xlsx", sep="")
+    filepath <- paste("data/alcatraz/Alcatraz", year, "data_FINAL.xlsx", sep="")
   } else {
-    filepath <- paste("data_from_USGS/", filename, ".xlsx", sep="")
+    filepath <- paste("data/alcatraz/", filename, ".xlsx", sep="")
   }
   
   
-  ztabl <- read.xlsx(filepath,
+  ztabl <- read.xlsx(here(filepath),
                      sheetIndex = worksheet,
                      startRow = 3) %>% 
     select(-starts_with("NA")) # this trims off any random empty columns
@@ -43,6 +44,9 @@ bcnh <- alcatraz_reader_xlsx(year = "2017", worksheet = "BCNH")
 sneg <- alcatraz_reader_xlsx("2017", "SNEG")
 
 all_checks_usgs <- alcatraz_reader_xlsx(year = "2018", worksheet = "Sheet1", filename = "Alcatraz2018data_forACR")
+
+
+all_checks_usgs <- read.xlsx(here("data/alcatraz/70_Alcatraz_2021databackupSNG,BCNH.xlsx"), sheetIndex = "Visits", startRow = 3)
 
 
 #--------------------------------------------------------
@@ -61,68 +65,24 @@ return(nest.info)
 
 #--------------------------------------------------------
 
-alcatraz_nest_checker <- function(sp.df){
-  # now a function to extract the nest check data from the funky wide USGS format to a normal long table
-  # most of what we peel out here has a direct match to what's collected in the HEP protocol, but the format is slightly different 
-  # when the xlsx file is read, duplicate column names are given sequential trailing numbers.
-  # INPUT: "sp.df" is the data frame for a particular species, that we just created with "alcatraz_reader"
-#-----
-  
-# determine how many sets of check columns there are
-#num.check.col.groups <- (ncol(sp.df) - 7 - 2)/5
-num.check.col.groups <- sp.df %>% 
-  select(matches("\\d")) %>% # column names that contain a digit
-  summarize(num.groups = ncol(.)/5) # there are 5 standard columns for each nest check
-# make a list of numbers representing each set of check columns
-num.check.repeats <- seq(1, length.out = num.check.col.groups[1, 1], by = 1)
+names(all_checks_usgs) <- tolower(names(all_checks_usgs))
 
-check0 <- sp.df %>% 
-  select(NO., SPP, DATE, Egg, Chick, Age, Notes) %>% 
-  mutate_at(c("Egg", "Age", "Chick", "Notes"), as.character) # to avoid warnings upon rbind()ing below
-
-# this sub-function selects just those columns with matching trailing numbers, with the trailing number specified with "check.repeat"
-checker <- function(check.repeat){
-  dot.check.repeat <- paste(".", check.repeat, sep = "")
-check <- sp.df %>% 
-  select(NO., SPP, ends_with(dot.check.repeat), -contains("X.")) %>% 
-  rename_all(~sub(dot.check.repeat, '', .x)) %>% # get rid of the digits in column names
-  mutate_at(c("Egg", "Age", "Chick", "Notes"), as.character) # to avoid warnings upon rbind()ing below
-return(check)
-}
-
-# now run checker() on each repeated set of check columns IDed in num.check.repeats()
-checks1 <- map_df(num.check.repeats, checker)
-# bind to the first check set of columns and do some cleaning
-checks <- rbind(check0, checks1) %>% 
-  mutate_all(trimws) %>% 
-  mutate(Egg = sub("\\+$", "", Egg),
-         Egg = sub(">", "", Egg),
-         Egg = sub("<", "", Egg),
-         Chick = sub(">", "", Chick),
-         Chick = sub("<", "", Chick)) %>%
-  mutate_at(c("Egg", "Age", "Chick"), as.numeric) %>% # this isn't explicit, but converting to numeric is a shortcut way to convert dashes to NA
-  mutate(Notes = tolower(Notes)) %>% 
-  filter(!is.na(DATE)) %>% 
-  filter(!is.na(SPP)) %>% 
-  unique() %>% 
-  arrange(NO., DATE)
-
-return(checks)
-}
-
-sneg_checks <- alcatraz_nest_checker(sneg)
-bcnh_checks <- alcatraz_nest_checker(bcnh)
-
-all_checks <- alcatraz_nest_checker(all_checks_usgs)
+alcatraz_checks <- all_checks_usgs %>% 
+  select(nest = no., spp, date, contains(c("egg", "chick", "age", "notes"))) %>%
+  mutate_all(as.character) %>% 
+  pivot_longer(cols = contains(c("egg", "chick", "age", "notes"))) %>% 
+  filter(!is.na(nest)) %>% 
+  separate(name, c("variable", "check.num")) %>% 
+  mutate(check.num = ifelse(is.na(check.num), 0, check.num),
+         check.num = as.numeric(check.num),
+         check.num = 1 + check.num) %>% 
+  pivot_wider(id_cols = c("nest", "spp", "date", "check.num"), names_from = variable, values_from = value) %>% 
+  filter(!is.na(egg) & !is.na(chick))
 
 
-## if working with multiple species dataframes, COMBINE THEM NOW.
-# the functions below will work with single species data frames, but combining now makes for fewer function calls below
-# rbind() can take >2 objects
-all_checks <- rbind(sneg_checks, bcnh_checks)
-rm(sneg, sneg_checks, bcnh, bcnh_checks)
 
 ##-------------------------------------------------------------
+# all_dup_check_checker probably not needed
 all_dup_check_checker <- function(all_checks) {
   # now checking for unique records for the same nest on the same day (i.e. conflicting data for the same date)
   # can view output to figure out which fields are different

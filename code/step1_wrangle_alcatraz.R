@@ -17,33 +17,7 @@ library(lubridate)
 library(xlsx)
 library(stringr)
 library(here)
-code_version = 1.6
 
-alcatraz_reader_xlsx <- function(year, worksheet, filename){
-  # first is a function to read in the csv files for each species
-  # if the data file we got from USGS was named following the standard they used in 2015-17 (e.g. Alcatraz2017data_FINAL), then 'filename' can be left out. I made this function flexible on filename so that we can avoid renaming files that we get from USGS, thus hopefully avoinding confusion about file history and version
-  # if the data file has a separate sheet for each species, then this reader function needs to be called multiple times to import each species separately, and 'worksheet' should be the name of the worksheet for the appropriate species
-  # if all species are combined on the same sheet, then the function only needs to be called once
-  # reading directly from the xlsx is slow but works fine, and is a more streamlined process than saving the xlsx's as csv's before importing to R
-  if(missing(filename)) {
-    filepath <- paste("data/alcatraz/Alcatraz", year, "data_FINAL.xlsx", sep="")
-  } else {
-    filepath <- paste("data/alcatraz/", filename, ".xlsx", sep="")
-  }
-  
-  
-  ztabl <- read.xlsx(here(filepath),
-                     sheetIndex = worksheet,
-                     startRow = 3) %>% 
-    select(-starts_with("NA")) # this trims off any random empty columns
-  
-  return(ztabl)
-}
-
-bcnh <- alcatraz_reader_xlsx(year = "2017", worksheet = "BCNH")
-sneg <- alcatraz_reader_xlsx("2017", "SNEG")
-
-all_checks_usgs <- alcatraz_reader_xlsx(year = "2018", worksheet = "Sheet1", filename = "Alcatraz2018data_forACR")
 
 
 all_checks_usgs <- read.xlsx(here("data/alcatraz/70_Alcatraz_2021databackupSNG,BCNH.xlsx"), sheetIndex = "Visits", startRow = 3)
@@ -77,9 +51,23 @@ alcatraz_checks <- all_checks_usgs %>%
          check.num = as.numeric(check.num),
          check.num = 1 + check.num) %>% 
   pivot_wider(id_cols = c("nest", "spp", "date", "check.num"), names_from = variable, values_from = value) %>% 
-  filter(!is.na(egg) & !is.na(chick))
+  filter(!is.na(egg) & !is.na(chick) & !is.na(age)) %>% 
+  # some egg, chick, age cells are "x" for renests; tis will turn those to NA, which is appropriate
+  mutate(date = ymd(date), across(.cols = c(egg, chick, age), as.numeric))
 
 
+
+# some basic data checking ----
+
+summary(alcatraz_checks)
+# any unexpected species?
+count(alcatraz_checks, spp)
+
+# notes?
+distinct(alcatraz_checks, notes) %>% view()
+
+alcatraz_checks <- alcatraz_checks %>% 
+  filter(spp != "PASS") 
 
 ## extract usefull info from notes ----
 
@@ -106,6 +94,7 @@ notes_extracter <- function(sp_checks){
          notes.failed = ifelse(is.na(notes), "N", notes.failed)) 
   
   sp_checks3 <- sp_checks2 %>% 
+    # fill egg and chick with 9 if check missed
     mutate(egg2 = ifelse(grepl("not checked", notes) | 
                            grepl("not found", notes) | 
                            grepl("missed", notes), 9, egg),

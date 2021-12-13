@@ -241,7 +241,8 @@ nests <- alcatraz_checks_stages %>%
          code = 70,
          multiple.survey.num = 1,
          complete.count = NA,
-         obs.initial = NA) %>% 
+         obs.initials = NA) %>% 
+  ungroup() %>% 
   arrange(species, date)
   
   

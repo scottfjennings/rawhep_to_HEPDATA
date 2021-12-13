@@ -54,9 +54,11 @@ count(alcatraz_checks, spp)
 distinct(alcatraz_checks, notes) %>% view()
 
 
-# fix any problems
+# fix any problems ----
 alcatraz_checks <- alcatraz_checks %>% 
-  filter(spp != "PASS") 
+  filter(spp != "PASS")
+
+
 #
 ## extract usefull info from notes; this likely not needed for hepraw_to_HEPDATA ----
 
@@ -231,7 +233,7 @@ nests <- alcatraz_checks_stages %>%
   mutate(peak.active = ifelse(total.nests == max(total.nests), TRUE, FALSE),
          code = 70,
          multiple.survey.num = 1,
-         complete.count = NA,
+         complete.count = "no",
          obs.initials = NA) %>% 
   ungroup() %>% 
   arrange(species, date)

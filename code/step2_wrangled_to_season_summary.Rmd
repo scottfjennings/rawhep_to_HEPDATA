@@ -33,7 +33,7 @@ date.col.width = 0.6
 ```{r}
 # step 1: input the year you are working with and read in the wrangled Survey123 data
 # zyear = 2020
-wrangled_s123 <- readRDS(here(paste("data/wrangled/wrangled_s123", zyear, sep = "_")))
+wrangled_raw <- readRDS(here(paste("data/wrangled/wrangled_raw", zyear, sep = "_")))
 
 
 
@@ -49,12 +49,12 @@ wrangled_s123 <- readRDS(here(paste("data/wrangled/wrangled_s123", zyear, sep = 
 
 
 # step 4: check if the species nested in the selected colony and year; if not, do not need to create season summary sheet.
-# wrangled_s123$nests %>% filter(species == zspp, code == zcode) %>% summarize(max(total.nests))
+# wrangled_raw$nests %>% filter(species == zspp, code == zcode) %>% summarize(max(total.nests))
 
 
 # if this value is > 0, can click knit above and the season summary sheet will be generated
 # if this value = 0, append the didn't nest list:
-#if(wrangled_s123$nests %>% filter(species == zspp, code == zcode) %>% summarize(max(total.nests)) == 0) {
+#if(wrangled_raw$nests %>% filter(species == zspp, code == zcode) %>% summarize(max(total.nests)) == 0) {
 #  knit_exit()
 #}
 
@@ -229,11 +229,18 @@ flextable(screeners) %>%
 ```{r}
 # make colony/effort summary box
 
-observers.effort <- wrangled_s123$observers.effort %>% 
+if(zcode == 70 & zspp %in% c("BCNH", "SNEG")) {
+ observers.effort <- wrangled_raw$observers.effort %>% 
+  filter(code == zcode, 
+         species == zspp) %>%  
+  select(code, species, colony, everything())
+ 
+} else {
+observers.effort <- wrangled_raw$observers.effort %>% 
   filter(code == zcode) %>% 
   mutate(species = zspp) %>% 
   select(code, species, colony, everything())
-
+}
 
 ```
 
@@ -251,7 +258,7 @@ flextable(observers.effort) %>%
 
 
 # total nests  
-total.nests <- wrangled_s123$nests %>% 
+total.nests <- wrangled_raw$nests %>% 
   filter(code == zcode, species == zspp) %>% 
   select(species, date, multiple.survey.num, total.nests, complete.count) %>%  
   arrange(date) %>% 
@@ -262,7 +269,7 @@ total.nests <- wrangled_s123$nests %>%
   mutate(variable = "total.nests") %>% 
   select(variable, everything())
 
-peak_active <- wrangled_s123$nests %>% 
+peak_active <- wrangled_raw$nests %>% 
   filter(code == zcode, species == zspp) %>% 
   select(species, date, multiple.survey.num, peak.active, complete.count)  %>% 
   arrange(date) %>% 
@@ -274,7 +281,7 @@ peak_active <- wrangled_s123$nests %>%
   select(variable, everything())
   
 
-obs_initials <- wrangled_s123$nests %>% 
+obs_initials <- wrangled_raw$nests %>% 
   filter(code == zcode, species == zspp) %>% 
   select(species, date, multiple.survey.num, obs.initials, complete.count) %>%  
   arrange(date) %>% 
@@ -326,7 +333,7 @@ Number of nests at each stage
 ```{r}
 
 if(zspp %in% c("GREG", "GBHE")) {
-nest_stages_df <- wrangled_s123$stages %>% 
+nest_stages_df <- wrangled_raw$stages %>% 
   filter(code == zcode, species == zspp) %>% 
   mutate(stage = paste("stage", stage, sep = ".")) %>% 
   arrange(date) %>%
@@ -339,7 +346,7 @@ nest_stages_df <- wrangled_s123$stages %>%
   rename(variable = stage)
 
 
-rop <- wrangled_s123$stages %>% 
+rop <- wrangled_raw$stages %>% 
   filter(code == zcode, species == zspp) %>%  
   distinct(code, multiple.survey.num, date, species, which.rop) %>%
   arrange(date) %>%
@@ -405,7 +412,7 @@ Stage 4 brood size date selection.
 
 if(zspp %in% c("GREG", "GBHE")) {
 
-brood_sizes <- wrangled_s123$brood.sizes %>% 
+brood_sizes <- wrangled_raw$brood.sizes %>% 
   filter(code == zcode, species == zspp)  %>% 
   group_by(date) %>% 
   mutate(max.num.nest = max(num.nests)) %>% 
@@ -450,7 +457,7 @@ note: only dates with at least 1 stage 4 nest are shown
 
 ```{r}
 # disturbance
-disturbance <- wrangled_s123$disturbance %>% 
+disturbance <- wrangled_raw$disturbance %>% 
   filter(code == zcode, species == zspp) %>%  
   select(code, species, date, observed.inferred = obs.inf, description, type, result)
 
@@ -467,7 +474,7 @@ flextable(disturbance) %>%
 
 ```{r}
 # predators
-predators <- wrangled_s123$predators %>% 
+predators <- wrangled_raw$predators %>% 
   filter(code == zcode, species == zspp)
 
 ```
@@ -482,7 +489,7 @@ flextable(predators) %>%
 <br>
 ```{r}
 
-notes <- wrangled_s123$notes %>% 
+notes <- wrangled_raw$notes %>% 
   filter(code == zcode, species == zspp) %>%  
   mutate(date = as.character(date),
          date = ifelse(multiple.survey.num > 1, paste(date, multiple.survey.num, sep = "."), date)) %>% 

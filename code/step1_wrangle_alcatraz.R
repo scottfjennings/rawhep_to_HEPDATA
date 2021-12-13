@@ -53,10 +53,12 @@ count(alcatraz_checks, spp)
 # notes?
 distinct(alcatraz_checks, notes) %>% view()
 
+
+# fix any problems
 alcatraz_checks <- alcatraz_checks %>% 
   filter(spp != "PASS") 
 #
-## extract usefull info from notes ----
+## extract usefull info from notes; this likely not needed for hepraw_to_HEPDATA ----
 
 notes_extracter <- function(sp_checks){
   # fill the egg or chick fields with data extracted from the notes field, as appropriate
@@ -97,9 +99,9 @@ notes_extracter <- function(sp_checks){
   
   sp_checks4 <- sp_checks3 %>% 
     select(-egg, -chick) %>%
-    select(NO., SPP, DATE, egg = egg2, chick = chick2, Age, notes, notes.failed)  %>% 
+    select(nest, spp, date, egg = egg2, chick = chick2, age, notes, notes.failed)  %>% 
     mutate(keeper = ifelse(is.na(egg) & is.na(chick), "N", "Y")) %>%
-    arrange(NO., DATE) %>%
+    arrange(nest, date) %>%
     distinct()
                            
 }
@@ -113,42 +115,31 @@ all_checks_extracted<- notes_extracter(all_dups_Fixed)
 ## IMPORTANT MANUAL STEP HERE: examine the ...checks_extracted outputs to make sure no valuable/valid records have been classified with keeper == "N". 
 
 #Probably just need to look at records that have notes
-keeperN_with_noter <- function(sp_checks_extracted) {
-  alc_keeperN_with_notes <- sp_checks_extracted %>% 
-    filter(keeper == "N", !is.na(notes))
-}
-alc_keeperN_with_notes <- keeperN_with_noter(all_checks_extracted)
+alcatraz_checks %>% 
+    filter(keeper == "N", !is.na(notes)) %>% 
+  view()
 
 
 # can do a manual edit if there is still good data in alc_keeperN_with_notes, changing keeper to Y and changing egg, chick, etc as appropriate
-alc_keeperN_with_notes_edited <- edit(alc_keeperN_with_notes)
-all_checks_extracted_edited <- rbind(all_checks_extracted, alc_keeperN_with_notes_edited) %>% 
-  arrange(SPP, NO., DATE)
-# then use all_checks_extracted_edited below
+all_checks_extracted <- edit(all_checks_extracted)
 
-alc_noter <- function(sp_checks) {
-  # a helper function to check what the most common notes are and compare to the notes that are specified in notes_extracter() to make sure we're dealing with the important ones
-  sp_notes <- sp_checks %>% 
+  # a helper to check what the most common notes are and compare to the notes that are specified in notes_extracter() to make sure we're dealing with the important ones
+all_checks_extracted %>% 
   select(notes) %>% 
   mutate(notes = sub("\\.$", "", notes),
          notes = tolower(notes)) %>% 
   table() %>% 
   data.frame() %>% 
   arrange(-Freq)
-}
-bcnh_notes <- alc_noter(bcnh_checks)
 
 
-trim_keepers <- function(sp_checks_extracted){
 # and now filter to have just the keepers
-  sp_checks_trimmed <- sp_checks_extracted %>% 
+  all_checks_extracted <- all_checks_extracted %>% 
     filter(keeper == "Y") %>% 
     select(-keeper)
-}
 
 
-all_checks_trimmed <- trim_keepers(all_checks_extracted)
-all_checks_trimmed <- trim_keepers(all_checks_extracted_edited)
+
 
 # assign nest stage -----
 
@@ -167,7 +158,7 @@ zsp_checks <- alcatraz_checks %>%
 
 
 
-# now the meat of the function to generate the HEP_screening data structure
+# now the meat of the function to assign stages
 
 hep_checks <- zsp_checks %>% 
   mutate(stage = as.numeric(""),
@@ -216,7 +207,7 @@ observers_effort <- alcatraz_checks_stages %>%
   count(species) %>% 
   rename(total.days = n) %>% 
   mutate(code = 70,
-         colony = "Alcatraz",
+         colony = "Alcatraz Island",
          observers = NA,
          total.surveys = total.days,
          total.hours = NA)

@@ -1,6 +1,6 @@
 How to process data from Survey123 to HEPDATA
 ================
-2021-12-03
+2021-12-15
 
 This document describes the workflow for processing data from Survey123
 to HEPDATA format. It begins assuming you have downloaded a .csv of the
@@ -11,7 +11,8 @@ Survey123.
 
 Processing the data from Survey123 to HEPDATA is comprised of 6 steps:
 
-1.  Wrangle Survey123 data to usable format  
+1.  Wrangle raw HEP data (Survey123, Alcatraz, Bolinas) to usable
+    format  
 2.  Output Season Summary Sheet  
 3.  Manually screen each Season Summary Sheet
 4.  Extract screened data from Season Summary Sheets
@@ -49,10 +50,11 @@ zyear = 2021
 zversion = 102
 ```
 
-## Step 1, convert Survey123 data to more-usable format.
+## Step 1, convert raw HEP data to more-usable format.
 
-This step uses functions from step1\_wrangle\_survey123.R, which can be
-piped together into a single process.
+First Survey123 This step uses functions from
+step1\_wrangle\_survey123.R, which can be piped together into a single
+process.
 
 ``` r
 source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step1_wrangle_survey123.R")
@@ -89,6 +91,24 @@ Save wrangled\_s123 to the appropriate folder.
 
 ``` r
 wrangled_s123 %>% saveRDS(paste("data/wrangled/wrangled_s123", zyear, sep = "_"))
+```
+
+Next, Alcatraz. Wrangling Alcatraz data requires some manual data checks
+and the process cannot be fully automated into executable functions.
+
+To wrangle Alcatraz, follow the instructions and run the code in:
+<https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step1_wrangle_alcatraz.R>
+
+And Bolinas. TODO create Bolinas code
+
+Finally combine the wrangled data from each raw data source.
+
+``` r
+source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step1_combine_wrangled.R")
+```
+
+``` r
+combine_wrangled_hep %>% saveRDS(paste("data/wrangled/wrangled_raw", zyear, sep = "_"))
 ```
 
 ### Step 1.1, Check incoming data
@@ -199,7 +219,7 @@ colony instance by specifying species and colony in the call to
 render\_season\_summary:
 
 ``` r
-render_season_summary(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = 2021, zcode = 58, zspp = "BCNH")
+render_season_summary(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = 2021, zcode = 70, zspp = "BCNH")
 ```
 
 Or all species for a single colony:

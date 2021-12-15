@@ -228,7 +228,7 @@ flextable(screeners) %>%
 <br>
 ```{r}
 # make colony/effort summary box
-
+# Alcatraz spp counted on different days so effort needs to be stored in wrangled at species level. then need to deal with that here
 if(zcode == 70 & zspp %in% c("BCNH", "SNEG")) {
  observers.effort <- wrangled_raw$observers.effort %>% 
   filter(code == zcode, 

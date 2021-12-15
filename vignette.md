@@ -46,8 +46,6 @@ library(birdnames)
 source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/survey123_utility_functions.R")
 
 zyear = 2021
-
-zversion = 102
 ```
 
 ## Step 1, convert raw HEP data to more-usable format.
@@ -58,6 +56,9 @@ process.
 
 ``` r
 source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step1_wrangle_survey123.R")
+
+# set downloaded survey123 version
+zversion = 102
 ```
 
 This step fixes field names and date fields, adds a helper column to

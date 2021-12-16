@@ -39,26 +39,3 @@ return(wrangled_raw)
 
 }
 
-
-# add complete count to dates, nests, stages tables for 2020
-#' Title
-#'
-#' @param wrangled_raw_2020 
-#'
-#' @return
-#' @export
-#'
-#' @examples
-#' readRDS(here("data/wrangled/wrangled_raw_2020")) %>% 
-#' add_complete_count_2020() %>% 
-#' saveRDS(here("data/wrangled/wrangled_raw_2020"))
-add_complete_count_2020 <- function(wrangled_raw_2020) {
-  
-wrangled_raw_2020$dates <- wrangled_raw_2020$dates %>%
-  mutate(complete.count = "unk")
-wrangled_raw_2020$nests <- wrangled_raw_2020$nests %>%
-  mutate(complete.count = "unk")
-wrangled_raw_2020$stages <- wrangled_raw_2020$stages %>%
-  mutate(complete.count = "unk")  
-return(wrangled_raw_2020)
-}

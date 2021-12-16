@@ -9,16 +9,16 @@ library(lubridate)
 library(here)
 library(birdnames)
 
-source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/survey123_utility_functions.R")
+source("https://raw.githubusercontent.com/scottfjennings/rawhep_to_HEPDATA/main/code/rawhep_to_HEPDATA_utility_functions.R")
 
-zyear = 2021
+zyear = 2020
 
 
 ## Step 1, convert raw HEP data to more-usable format.----
 # First Survey123
 # This step uses functions from step1_wrangle_survey123.R, which can be piped together into a single process.
 
-source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step1_wrangle_survey123.R")
+source("https://raw.githubusercontent.com/scottfjennings/rawhep_to_HEPDATA/main/code/step1_wrangle_survey123.R")
 
 zversion = 102
 
@@ -46,10 +46,15 @@ wrangled_s123 %>% saveRDS(paste("data/wrangled/wrangled_s123", zyear, sep = "_")
 # TODO create Bolinas code
 
 #Finally combine the wrangled data from each raw data source.
-source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step1_combine_wrangled.R")
-combine_wrangled_hep %>% saveRDS(paste("data/wrangled/wrangled_raw", zyear, sep = "_"))
+source("https://raw.githubusercontent.com/scottfjennings/rawhep_to_HEPDATA/main/code/step1_combine_wrangled.R")
+combine_wrangled_hep() %>% saveRDS(paste("data/wrangled/wrangled_raw", zyear, sep = "_"))
 
- 
+# 2020 data needs complete.count field added to dates, nests, stages fields
+readRDS(here("data/wrangled/wrangled_raw_2020")) %>%
+  add_complete_count_2020() %>% # also defined in step1_combine_wrangled.R
+  saveRDS(here("data/wrangled/wrangled_raw_2020"))
+
+
 
 ### Step 1.1, Check wrangled raw data ----
 wrangled_raw <- readRDS(paste("data/wrangled/wrangled_raw", zyear, sep = "_"))
@@ -107,7 +112,7 @@ pmap(.l = list(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear =
 
 
 # single species X colony
-render_season_summary(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = 2021, zcode = 70, zspp = "BCNH")
+render_season_summary(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = 2020, zcode = 1.1, zspp = "GBHE")
 
 
 # Or all species for a single colony:
@@ -115,9 +120,14 @@ render_season_summary(file = here("code/step2_wrangled_to_season_summary.Rmd"), 
 pmap(.l = list(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = 2021, zcode = 16, zspp = c("GBHE", "GREG", "SNEG", "BCNH", "CAEG", "DCCO")), .f = render_season_summary)
 
 ## Step 4, extract tables from screened Season Summary Sheets ----
-source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step4_extract_screened_season_summary.r")
+source("https://raw.githubusercontent.com/scottfjennings/rawhep_to_HEPDATA/main/code/step4_extract_screened_season_summary.R")
 
-screened_s123 <- list(screen.log = map2_df(zyear, screened_seas_summ_files, get_screening_log),
+ screened_seas_summ_files <- list.files(paste("season_summary_forms/", zyear, "/", sep = ""))
+
+ # list.files returning an odd file name in first row for 2020, 
+ screened_seas_summ_files <- screened_seas_summ_files[-1]
+ 
+screened_hep <- list(screen.log = map2_df(zyear, screened_seas_summ_files, get_screening_log),
                       observers.effort = map2_df(zyear, screened_seas_summ_files, get_observers_effort),
                       nests = map2_df(zyear, screened_seas_summ_files, get_total_nest_table),
                       stages = map2_df(zyear, screened_seas_summ_files, get_nest_stage_rop_table),
@@ -125,14 +135,14 @@ screened_s123 <- list(screen.log = map2_df(zyear, screened_seas_summ_files, get_
                       predators = map2_df(zyear, screened_seas_summ_files, get_predators) %>%  distinct(),
                       disturbance = map2_df(zyear, screened_seas_summ_files, get_disturbance) %>%  distinct(),
                       notes = map2_df(zyear, screened_seas_summ_files, get_notes) %>% distinct())  
-names(screened_s123)
+names(screened_hep)
 
-saveRDS(screened_s123, here(paste("data/screened/screened_s123_", zyear, sep = "")))
+saveRDS(screened_hep, here(paste("data/screened/screened_hep_", zyear, sep = "")))
 
 ## Step 5 generate screening change log ----
-source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step5_make_screening_change_log.R")
+source("https://raw.githubusercontent.com/scottfjennings/rawhep_to_HEPDATA/main/code/step5_make_screening_change_log.R")
 
-track_changes_s123 <- list(screen.log = readRDS(here(paste("data/screened/screened_s123_", zyear, sep = "")))[["screen.log"]],
+track_changes_hep <- list(screen.log = readRDS(here(paste("data/screened/screened_hep_", zyear, sep = "")))[["screen.log"]],
                            observers.effort = make_track_change_tables(zyear, "observers.effort"),
                            nests = make_track_change_date_tables(zyear, "nests") %>% 
                              mutate(date = as.Date(date)) %>% 
@@ -153,21 +163,21 @@ track_changes_s123 <- list(screen.log = readRDS(here(paste("data/screened/screen
                              arrange(code, species, date)
 )
 
-names(track_changes_s123)
+names(track_changes_hep)
 
-str(track_changes_s123$nests)
+str(track_changes_hep$nests)
 
 
-track_changes_s123$nests %>% 
+track_changes_hep$nests %>% 
   filter(grepl("changed", changelog)) %>% view()
 
-saveRDS(track_changes_s123, here(paste("data/track_changes/track_changes_s123_", zyear, sep = ""))) 
+saveRDS(track_changes_hep, here(paste("data/track_changes/track_changes_hep_", zyear, sep = ""))) 
 
   
   
 ## Step 6 convert to HEPDATA
 
-source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step6_screened_to_HEPDATA.R")
+source("https://raw.githubusercontent.com/scottfjennings/rawhep_to_HEPDATA/main/code/step6_screened_to_HEPDATA.R")
 
 HEPDATA <- screened_to_HEPDATA(zyear)
 

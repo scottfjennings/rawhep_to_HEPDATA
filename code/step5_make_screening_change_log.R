@@ -3,7 +3,7 @@
 # compare screened to unscreened to generate a list of changes made during screening
 
 get_screened_col_spp <- function(zyear) {
-screened_col_spp <- readRDS(here(paste("data/screened/screened_s123_", zyear, sep = "")))$screen.log %>%
+screened_col_spp <- readRDS(here(paste("data/screened/screened_hep_", zyear, sep = "")))$screen.log %>%
   mutate(screened = ifelse(screener.1 != "not screened", TRUE, FALSE)) %>% 
   filter(screened == TRUE) %>% 
   select(code, species, screened)
@@ -15,12 +15,12 @@ make_track_change_tables <- function(zyear, ztable) {
 screened_sheets <- get_screened_col_spp(zyear)  
   
 # get wrangled table 
-wrangled_table <- readRDS(here(paste("data/wrangled/wrangled_s123_", zyear, sep = "")))[[ztable]] %>%  
+wrangled_table <- readRDS(here(paste("data/wrangled/wrangled_raw_", zyear, sep = "")))[[ztable]] %>%  
   mutate(record.in.wrangled = TRUE) %>% 
   mutate(across(everything(), as.character))
 
 # get screened table 
-screened_table <- readRDS(here(paste("data/screened/screened_s123_", zyear, sep = "")))[[ztable]] %>% 
+screened_table <- readRDS(here(paste("data/screened/screened_hep_", zyear, sep = "")))[[ztable]] %>% 
   data.frame() %>% 
   ungroup() %>% 
   mutate(record.in.screened = TRUE) %>% 
@@ -43,12 +43,12 @@ make_track_change_date_tables <- function(zyear, ztable) {
 screened_sheets <- get_screened_col_spp(zyear)  
   
 # get wrangled table 
-wrangled_table <- readRDS(here(paste("data/wrangled/wrangled_s123_", zyear, sep = "")))[[ztable]] %>%  
+wrangled_table <- readRDS(here(paste("data/wrangled/wrangled_raw_", zyear, sep = "")))[[ztable]] %>%  
   mutate(record.in.wrangled = TRUE) %>% 
   mutate(across(everything(), as.character))
 
 # get screened table 
-screened_table <- readRDS(here(paste("data/screened/screened_s123_", zyear, sep = "")))[[ztable]] %>% 
+screened_table <- readRDS(here(paste("data/screened/screened_hep_", zyear, sep = "")))[[ztable]] %>% 
   data.frame() %>% 
   ungroup() %>% 
   mutate(record.in.screened = TRUE) %>% 

@@ -6,25 +6,9 @@
 # 
 # read, create data ----
 
-read_s123 <- function(zyear, zversion = "0", add.test.data = FALSE) {
-s123_file = paste("HEP", zyear, zversion, sep = "_")
-#s123_file_proofed <- paste("HEP", zyear, "cumulative", sep = "")
-
-# read site data
-# this file created with https://github.com/scottfjennings/HEP_data_work/blob/master/HEP_code/HEP_utility_functions.R
-# and copied manually to s123 directory
-
-# downloaded Survey123 data
-s123 <- read.csv(
-  here(paste("data/downloaded/", s123_file, ".csv", sep = ""))
-  )
-
-if(add.test.data == TRUE) {
+add_2020_test_data <- function(s123) {
+# test data made with make_test_data.R
  s123 <- rbind(s123, readRDS(here("data/downloaded/test_data")))
-}
-
-s123 <- s123 %>% 
-  mutate(across(where(is.character), str_trim))
 
 }
 

@@ -168,6 +168,7 @@ if(grepl("GREG|GBHE", zfile)){
   disturbance <- extr_doc[[length(extr_doc) - 3]]
   disturbance <- disturbance %>% 
     mutate(code = as.numeric(code))
+  disturbance[disturbance == ""] <- NA 
 }
 
 # all_disturbance <- map2_df(zyear, seas_summ_files, get_disturbance) %>% distinct() # should be duplicated for each species, distinct will remove dups

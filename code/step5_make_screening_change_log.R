@@ -46,7 +46,8 @@ screened_table <- readRDS(here(paste("data/screened/screened_hep_", zyear, sep =
   data.frame() %>% 
   ungroup() %>% 
   mutate(record.in.screened = TRUE) %>% 
-  mutate(across(everything(), as.character))
+  mutate(across(everything(), as.character)) %>% 
+  mutate_all(~(ifelse(.=="NA", NA, .)))
 
 table_changelog <- full_join(wrangled_table, screened_table) %>% 
   full_join(screened_sheets) %>% # join with screen_log to have screening notes and confirmation that this colony X species was screened (assuming good record keeping during screening process)

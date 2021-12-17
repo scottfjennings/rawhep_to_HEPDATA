@@ -9,7 +9,13 @@
 # we need to expand out to all possible columns here
 
 screened_to_HEPDATA <- function(zyear) {
-screened_s123 <- readRDS(here(paste("data/screened/screened_s123_", zyear, sep = "")))
+  
+  screened_sheets <- get_screened_col_spp(zyear) %>% 
+    select(-screened) %>% 
+    mutate(code = as.numeric(code))
+  
+  
+screened_s123 <- readRDS(here(paste("data/screened/screened_hep_", zyear, sep = "")))
 
 
 # 1         DATAID
@@ -22,6 +28,7 @@ screened_s123 <- readRDS(here(paste("data/screened/screened_s123_", zyear, sep =
 # 8   NUMBERVISITS
 # 9     TOTALHOURS
 effort <- screened_s123$observers.effort %>% 
+  right_join(screened_sheets) %>% 
   left_join(., readRDS(here("data/HEP_site_names_nums_utm")) %>% 
               select(code, site.name)) %>% 
   select(SITE = site.name, CODE = code, SPECIES = species, NUMBERVISITS = total.surveys, TOTALHOURS = total.hours) %>% 
@@ -30,11 +37,13 @@ effort <- screened_s123$observers.effort %>%
 # 10  PEAKACTVNSTS ----
 
 peakactvnsts.gr0 <- screened_s123$nests %>% 
+  right_join(screened_sheets) %>%  
   filter(peak.active == 1) %>% 
   select(CODE = code, SPECIES = species, PEAKACTVNSTS = total.nests) %>% 
   mutate(YEAR = zyear)
 
-peakactvnsts.0 <- screened_s123$nests %>%
+peakactvnsts.0 <- screened_s123$nests %>% 
+  right_join(screened_sheets) %>% 
   group_by(code, species) %>% 
   summarise(peakactvnsts = sum(peak.active)) %>% 
   filter(peakactvnsts == 0) %>% 
@@ -53,7 +62,8 @@ HEPDATA_out <- full_join(effort, peakactvnsts_out)
 
 
 # 16         NOTES ----
-notes <- screened_s123$notes %>% 
+notes <- screened_s123$notes %>%  
+  right_join(screened_sheets) %>% 
   filter(note.type == "for.HEPDATA", notes != "", !is.na(notes)) %>% 
   select(CODE = code, SPECIES = species, NOTES = notes) %>% 
   mutate(YEAR = zyear)
@@ -62,7 +72,8 @@ HEPDATA_out <- full_join(HEPDATA_out, notes)
 
 # stage 4 brood sizes ----
 # 17 BRD1; # 18 BRD2; # 19 BRD3; # 20 BRD4; # 21 BRD5; # 22 BRD6
-brood_sizes <- screened_s123$brood.sizes %>% 
+brood_sizes <- screened_s123$brood.sizes %>%  
+  right_join(screened_sheets) %>% 
   data.frame() %>% 
   filter(brd.size.date == TRUE) %>% 
   mutate(brd = paste("BRD", brd, sep = "")) %>% 
@@ -94,7 +105,8 @@ rop_names <- data.frame(which.rop = paste("rop.", seq(1, 7), sep = ""),
                         rop.date.name = c("MARSTGEDATE", "LTMARSTGDATE", "APRSTGEDATE", "MAYSTGEDATE", "JUNSTGEDATE", "LTJUNSTGDATE", "JULSTGEDATE"))
 
 
-all_rop_stages <- screened_s123$stages %>% 
+all_rop_stages <- screened_s123$stages %>%  
+  right_join(screened_sheets) %>% 
   filter(grepl("rop", which.rop)) %>% 
   mutate(stage = paste("STAGE", stage, sep = ""),
          YEAR = zyear) %>% 
@@ -127,7 +139,8 @@ HEPDATA_out <- full_join(HEPDATA_out, rop_dates_nests)
 # disturbances ----
 # 65 DIST1DATE; # 66 DIST1TYPE; # 67 DIST1RESULT; # 68 DIST2DATE; # 69 DIST2TYPE; # 70 DIST2RESULT; # 71 DIST3DATE; # 72 DIST3TYPE; # 73 DIST3RESULT; # 74 DIST4DATE; # 75 DIST4TYPE; # 76 DIST4RESULT; # 77 DIST5DATE; # 78 DIST5TYPE; # 79 DIST5RESULT; # 80 DIST6DATE; # 81 DIST6TYPE; # 82 DIST6RESULT; # 83; DIST7DATE; # 84 DIST7TYPE; # 85 DIST7RESULT; # 86 DIST8DATE; # 87 DIST8TYPE; # 88 DIST8RESULT; # 89 DIST9DATE; # 90 DIST9TYPE; # 91 DIST9RESULT
 
-disturbance <- screened_s123$disturbance %>% 
+disturbance <- screened_s123$disturbance %>%  
+  right_join(screened_sheets) %>% 
   mutate(result = tolower(result)) %>% 
   filter(!grepl("x", result)) %>% 
   group_by(code, species) %>% 
@@ -159,7 +172,8 @@ HEPDATA_out <- full_join(HEPDATA_out, disturbance_out)
 # 95   CORANESTING
 # 96   BAEANESTING
 # 97  TUVUROOSTING
-predators <- screened_s123$predators %>% 
+predators <- screened_s123$predators %>%  
+  right_join(screened_sheets) %>% 
   filter(nesting == 1, predator.species %in% c("GHOW", "RTHA", "OSPR", "CORA", "BAEA", "TUVU")) %>% 
   mutate(predator = ifelse(predator.species == "TUVU", 
                            paste(toupper(predator.species), "ROOSTING", sep = ""),

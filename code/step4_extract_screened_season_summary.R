@@ -149,7 +149,8 @@ if(grepl("GREG|GBHE", zfile)){
   stage4brd <- stage4brd %>% 
     pivot_longer(cols = c(paste("brd", seq(1, 5), sep = ".")), names_to = "brd", values_to = "num.nests") %>%
     mutate(brd = gsub("brd.", "", brd)) %>% 
-    separate(date, into = c("date", "multiple.survey.num"), 11) %>% 
+    mutate(date = gsub("\\.", "_", date)) %>% 
+    separate(date, into = c("date", "multiple.survey.num"), sep = "_") %>% 
     mutate(multiple.survey.num = ifelse(multiple.survey.num == "" | is.na(multiple.survey.num), 1, multiple.survey.num)) %>% 
     select(code, date, multiple.survey.num, species, num.nests, brd, brd.size.date, stage5.nests) %>% 
     mutate(across(.cols = c(code, num.nests), as.numeric))
@@ -168,8 +169,9 @@ if(grepl("GREG|GBHE", zfile)){
   disturbance <- extr_doc[[length(extr_doc) - 3]]
   disturbance <- disturbance %>% 
     mutate(code = as.numeric(code))
-  disturbance[disturbance == ""] <- NA 
-}
+  disturbance[disturbance == ""] <- NA
+return(disturbance)
+  }
 
 # all_disturbance <- map2_df(zyear, seas_summ_files, get_disturbance) %>% distinct() # should be duplicated for each species, distinct will remove dups
   
@@ -192,7 +194,8 @@ get_notes <- function(zyear, zfile) {
   extr_doc <- docx_extract_all_tbls(doc)
   notes <- extr_doc[[length(extr_doc)-1]]
   notes <- notes %>% 
-    separate(date, into = c("date", "multiple.survey.num"), 11) %>% 
+    mutate(date = gsub("\\.", "_", date)) %>% 
+    separate(date, into = c("date", "multiple.survey.num"), sep = "_") %>% 
     mutate(code = as.numeric(code),
            multiple.survey.num = ifelse(multiple.survey.num == "" | is.na(multiple.survey.num), 1, multiple.survey.num),
            multiple.survey.num = as.numeric(multiple.survey.num))

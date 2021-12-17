@@ -2,13 +2,6 @@
 
 # compare screened to unscreened to generate a list of changes made during screening
 
-get_screened_col_spp <- function(zyear) {
-screened_col_spp <- readRDS(here(paste("data/screened/screened_hep_", zyear, sep = "")))$screen.log %>%
-  mutate(screened = ifelse(screener.1 != "not screened", TRUE, FALSE)) %>% 
-  filter(screened == TRUE) %>% 
-  select(code, species, screened)
-}
-
 
 
 make_track_change_tables <- function(zyear, ztable) {

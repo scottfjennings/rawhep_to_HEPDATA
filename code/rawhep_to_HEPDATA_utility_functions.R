@@ -120,7 +120,7 @@ return(nesting_history)
 #  view()
 #}
 
-# make list of colony X species combos that still need a Season Summary Sheet made
+# make list of colony X species combos that still need a Season Summary Sheet made ----
 get_colony_spp_need_sheet <- function(zyear, include.inactive = TRUE) {
 colony_spp <- readRDS(paste("data/wrangled/wrangled_s123", zyear, sep = "_"))$nests 
 
@@ -150,7 +150,7 @@ return(colony_spp_need_sheet)
 }
 
 
-# function to output season summary sheet for a given year, colony and species
+# function to output season summary sheet for a given year, colony and species ----
 # files must be .docx. .doc will not work without downloading LibreOffice software
 render_season_summary <- function(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear, zcode, zspp) {
   rmarkdown::render(file, params = list(
@@ -203,6 +203,17 @@ out_names <- gsub(paste(c("character0", '"'), collapse = "|"), "", out_names)
 out_names <- gsub(", ", "_", out_names)
 out_names <- gsub("eagle_sp", "eagle species", out_names)
   
+}
+
+
+
+# generate list of season summary sheets that have been screened
+
+get_screened_col_spp <- function(zyear) {
+screened_col_spp <- readRDS(here(paste("data/screened/screened_hep_", zyear, sep = "")))$screen.log %>%
+  mutate(screened = ifelse(screener.1 != "not screened", TRUE, FALSE)) %>% 
+  filter(screened == TRUE) %>% 
+  select(code, species, screened)
 }
 
 

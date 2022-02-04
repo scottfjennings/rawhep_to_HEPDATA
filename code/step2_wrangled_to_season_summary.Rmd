@@ -22,6 +22,8 @@ library(flextable)
 library(officer)
 library(knitr)
 
+source("https://raw.githubusercontent.com/scottfjennings/rawhep_to_HEPDATA/main/code/rawhep_to_HEPDATA_utility_functions.R")
+
 options(scipen = 999)
 
 # some options for table column widths; probably won't need to change these
@@ -65,141 +67,6 @@ wrangled_raw <- readRDS(here(paste("data/wrangled/wrangled_raw", zyear, sep = "_
 ```{r}
 
 # define  2 functions used only here
-
-# split tables with many date columns into multiple tables for better display in Season Summary .doc files
-# for tables with m number of lead columns and n number of columns representing the dates surveys were done on, split the date columns into groups of num_dates_per_split, and create multiple sub-tables as the concatenation of the same lead columns and each successive group of date columns 
-
-date_table_splitter <- function(ztable, num_dates_per_split = 6) {
-num.splits <- ceiling((ncol(ztable) - 3) / num_dates_per_split)
-seq.splits <- seq(1, num.splits)
-col.splits <- 3 + (num_dates_per_split * seq.splits)
-lead.cols <- c(1:3)
-ztable1_cols <- c(lead.cols, 4:col.splits[1])
-
-make_date_flextable <- function(date_subtable) {
-  out_date_flextable <- date_subtable %>%
-    flextable() %>%
-  autofit() %>% 
-  fit_to_width(max_width = 8.5) %>% 
-  width(j = 1:3, width = lead.col.width) %>% 
-  width(j = 4:ncol(date_subtable), width = date.col.width)
-return(out_date_flextable)
-  }
-
-# define sub-table 1 columns
-  if(ncol(ztable) <= col.splits[1]){
-sub_table1 <- ztable[,c(1:ncol(ztable))]
-  }  
-  if(ncol(ztable) > col.splits[1]){
-sub_table1 <- ztable[,c(1:col.splits[1])]
-}
-
-# define sub-table 2 columns
-if(length(col.splits) > 1){
-if(ncol(ztable) > col.splits[1]) {
-  if(ncol(ztable) <= col.splits[2]){
-sub_table2 <- ztable[,c(lead.cols, (col.splits[1]+1):ncol(ztable))]
-  }  
-  if(ncol(ztable) > col.splits[2]){
-sub_table2 <- ztable[,c(lead.cols, (col.splits[1]+1):col.splits[2])]
-}
-}
-}
-# define sub-table 3 columns
-if(length(col.splits) > 2) {
-if(ncol(ztable) > col.splits[2]) {
-  if(ncol(ztable) <= col.splits[3]){
-sub_table3 <- ztable[,c(lead.cols, (col.splits[2]+1):ncol(ztable))]
-  }  
-  if(ncol(ztable) > col.splits[3]){
-sub_table3 <- ztable[,c(lead.cols, (col.splits[2]+1):col.splits[3])]
-}
-}
-}
-# define sub-table 4 columns
-if(length(col.splits) > 3) {
-if(ncol(ztable) > col.splits[3]) {
-  if(ncol(ztable) <= col.splits[4]){
-sub_table4 <- ztable[,c(lead.cols, (col.splits[3]+1):ncol(ztable))]
-  }  
-  if(ncol(ztable) > col.splits[4]){
-sub_table4 <- ztable[,c(lead.cols, (col.splits[3]+1):col.splits[4])]
-}
-}
-}
-# define sub-table 5 columns
-if(length(col.splits) > 4) {
-if(ncol(ztable) > col.splits[4]) {
-  if(ncol(ztable) <= col.splits[5]){
-sub_table5 <- ztable[,c(lead.cols, (col.splits[4]+1):ncol(ztable))] %>% 
-  make_date_flextable()
-  }  
-  if(ncol(ztable) > col.splits[5]){
-sub_table5 <- ztable[,c(lead.cols, (col.splits[4]+1):col.splits[5])] %>% 
-  make_date_flextable()
-}
-} 
-}
-
-#--- make sub table 1
-if(exists("sub_table1")) {
-sub_table1 <- sub_table1 %>% 
-  make_date_flextable() 
-} else {
-  sub_table1 <- NULL
-}
-#--- make sub table 2
-if(exists("sub_table2")) {
-sub_table2 <- sub_table2 %>% 
-  make_date_flextable() 
-} else {
-  sub_table2 <- NULL
-}
-#--- make sub table 3
-if(exists("sub_table3")) {
-sub_table3 <- sub_table3 %>% 
-  make_date_flextable()
-} else {
-  sub_table3 <- NULL
-}
-#--- make sub table 4
-if(exists("sub_table4")) {
-sub_table4 <- sub_table4 %>% 
-  make_date_flextable()
-} else {
-  sub_table4 <- NULL
-}
-#--- make sub table 5
-if(exists("sub_table5")) {
-  sub_table5 <- sub_table5 %>% 
-  make_date_flextable()
-} else {
-  sub_table5 <- NULL
-}
-
-out_sub_tables <- list(sub_table1 = sub_table1,
-                       sub_table2 = sub_table2,
-                       sub_table3 = sub_table3,
-                       sub_table4 = sub_table4,
-                       sub_table5 = sub_table5)
-return(out_sub_tables)
-}
-
-
-
-# convert date to month-day
-date2monthday <- function(df) {
-  df <- df %>% 
-  mutate(date = as.character(date),
-         date = gsub(paste(zyear, "-", sep = ""), "", date),
-         date = ifelse(multiple.survey.num > 1, paste(date, multiple.survey.num, sep = "."), date))
-}
-
-monthday_completecount <- function(df) {
-    df <- df %>%
-      mutate(date = ifelse(complete.count == "no", paste(date, "*", sep = ""), date))
-}
-
 
 ```
 

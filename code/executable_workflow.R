@@ -11,7 +11,7 @@ library(birdnames)
 
 source("https://raw.githubusercontent.com/scottfjennings/rawhep_to_HEPDATA/main/code/rawhep_to_HEPDATA_utility_functions.R")
 
-zyear = 2020
+zyear = 2021
 
 
 ## Step 1, convert raw HEP data to more-usable format.----
@@ -20,13 +20,16 @@ zyear = 2020
 
 source("https://raw.githubusercontent.com/scottfjennings/rawhep_to_HEPDATA/main/code/step1_wrangle_survey123.R")
 
-zversion = 102
+zversion = "102"
 
- wrangled_s123 <- read_s123(zyear, add.test.data = FALSE) %>% 
+s123_file = paste("HEP", zyear, zversion, sep = "_")
+
+ wrangled_s123 <- read.csv(here(paste("data/downloaded/", s123_file, ".csv", sep = ""))) %>% 
   filter(useforsummary == "y") %>% # 
   fix_s123_names() %>% 
-  fix_s123_date_fields() %>% 
+  fix_s123_date_fields(zformat = "%m/%d/%Y %H:%M") %>% # if 2020, need to set zformat  = "%m/%d/%Y %H:%M" because date comes in different format. default works for 2021
   add_multiple_survey_num() %>% 
+   mutate(complete.count = "unk") %>% 
   wrangle_s123()
 
 
@@ -122,11 +125,9 @@ pmap(.l = list(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear =
 ## Step 4, extract tables from screened Season Summary Sheets ----
 source("https://raw.githubusercontent.com/scottfjennings/rawhep_to_HEPDATA/main/code/step4_extract_screened_season_summary.R")
 
- screened_seas_summ_files <- list.files(paste("season_summary_forms/", zyear, "/", sep = ""))
+ screened_seas_summ_files <- list.files(paste("season_summary_forms/", zyear, "/", sep = ""), )
 
- # list.files returning an odd file name in first row for 2020, 
- screened_seas_summ_files <- screened_seas_summ_files[-1]
- 
+
 screened_hep <- list(screen.log = map2_df(zyear, screened_seas_summ_files, get_screening_log),
                       observers.effort = map2_df(zyear, screened_seas_summ_files, get_observers_effort),
                       nests = map2_df(zyear, screened_seas_summ_files, get_total_nest_table),
@@ -138,6 +139,8 @@ screened_hep <- list(screen.log = map2_df(zyear, screened_seas_summ_files, get_s
 names(screened_hep)
 
 saveRDS(screened_hep, here(paste("data/screened/screened_hep_", zyear, sep = "")))
+
+
 
 ## Step 5 generate screening change log ----
 source("https://raw.githubusercontent.com/scottfjennings/rawhep_to_HEPDATA/main/code/step5_make_screening_change_log.R")
@@ -152,13 +155,18 @@ track_changes_hep <- list(screen.log = readRDS(here(paste("data/screened/screene
                              arrange(code, species, date),
                            brood.sizes = make_track_change_date_tables(zyear, "brood.sizes") %>% 
                              mutate(date = as.Date(date)) %>% 
-                             arrange(code, species, date),
+                             group_by(code, species, date) %>% # need to remove dates with no stage 4 nests (these only exist in wrangled_) for meaningful comparison of differences
+                            mutate(max.num.nest = max(num.nests)) %>%
+                            ungroup() %>%
+                            filter(max.num.nest > 0) %>% 
+                            arrange(code, species, date, brd),
                            predators = make_track_change_tables(zyear, "predators") %>% 
                              arrange(code, species, predator.species),
                            disturbance = make_track_change_date_tables(zyear, "disturbance") %>% 
                              mutate(date = as.Date(date)) %>% 
                              arrange(code, species, date),
                            notes = make_track_change_date_tables(zyear, "notes") %>% 
+                            filter(note.type != "for.HEPDATA") %>% 
                              mutate(date = as.Date(date)) %>% 
                              arrange(code, species, date)
 )
@@ -169,13 +177,21 @@ str(track_changes_hep$nests)
 
 
 track_changes_hep$nests %>% 
-  filter(grepl("changed", changelog)) %>% view()
+  filter(grepl("changed", changelog)) %>% 
+  arrange(code, species, date) %>% 
+  view()
+
+track_changes_hep$brood.sizes %>% 
+  filter(grepl("changed", changelog)) %>% 
+  arrange(code, species, date) %>% 
+  view()
+
 
 saveRDS(track_changes_hep, here(paste("data/track_changes/track_changes_hep_", zyear, sep = ""))) 
 
   
   
-## Step 6 convert to HEPDATA
+## Step 6 convert to HEPDATA ----
 
 source("https://raw.githubusercontent.com/scottfjennings/rawhep_to_HEPDATA/main/code/step6_screened_to_HEPDATA.R")
 

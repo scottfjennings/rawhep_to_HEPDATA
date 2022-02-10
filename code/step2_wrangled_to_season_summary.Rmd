@@ -65,13 +65,6 @@ wrangled_raw <- readRDS(here(paste("data/wrangled/wrangled_raw", zyear, sep = "_
 
 
 ```{r}
-
-# define  2 functions used only here
-
-```
-
-
-```{r}
 # make a blank table to record screener initials
 
 screeners <- data.frame(year = as.character(zyear),

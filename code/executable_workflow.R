@@ -20,11 +20,8 @@ zyear = 2021
 
 source("https://raw.githubusercontent.com/scottfjennings/rawhep_to_HEPDATA/main/code/step1_wrangle_survey123.R")
 
-zversion = "102"
 
-s123_file = paste("HEP", zyear, zversion, sep = "_")
-
- wrangled_s123 <- read.csv(here(paste("data/downloaded/", s123_file, ".csv", sep = ""))) %>% 
+ wrangled_s123 <- read.csv(here(paste("data/downloaded/HEP_2021.csv", sep = ""))) %>% 
   filter(useforsummary == "y") %>% # 
   fix_s123_names() %>% 
   fix_s123_date_fields(zformat = "%m/%d/%Y %H:%M") %>% # if 2020, need to set zformat  = "%m/%d/%Y %H:%M" because date comes in different format. default works for 2021

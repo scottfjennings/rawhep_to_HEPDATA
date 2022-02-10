@@ -47,7 +47,13 @@ wrangled_s123 %>% saveRDS(paste("data/wrangled/wrangled_s123", zyear, sep = "_")
 
 #Finally combine the wrangled data from each raw data source.
 source("https://raw.githubusercontent.com/scottfjennings/rawhep_to_HEPDATA/main/code/step1_combine_wrangled.R")
-combine_wrangled_hep() %>% saveRDS(paste("data/wrangled/wrangled_raw", zyear, sep = "_"))
+
+wrangled_alcatraz <- readRDS(here("data/wrangled/wrangled_alcatraz_2021"))
+wrangled_s123 <- readRDS(here("data/wrangled/wrangled_s123_2021"))
+
+
+combine_wrangled_hep(zyear = zyear, wrangled_s123) %>% 
+  saveRDS(paste("data/wrangled/wrangled_raw", zyear, sep = "_"))
 
 # 2020 data needs complete.count field added to dates, nests, stages fields
 readRDS(here("data/wrangled/wrangled_raw_2020")) %>%

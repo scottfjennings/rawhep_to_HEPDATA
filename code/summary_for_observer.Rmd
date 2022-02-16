@@ -46,7 +46,7 @@ wrangled_s123 <- readRDS(here(paste("data/wrangled/wrangled_s123", zyear, sep = 
 
 # input the colony code and species you want to generate a season summary sheet for
 
-#zcode = 5.0
+#zcode = 51.1
 
 observers <- read.csv(here("data/HEP_tracking_copy/observers.csv")) %>% 
   filter(SITE.CODE == zcode, year == zyear) %>% 
@@ -454,18 +454,6 @@ historic_phenology %>%
 
 ```{r}
 # stage 4 brood sizes
-first_stage5_date <- wrangled_s123$stages %>% 
-  filter(code == zcode, species %in% spp.nesting) %>%
-  filter(stage == 5, num.nests > 0) %>% 
-  filter(date == min(date)) %>% 
-  select(code, species, date)
-
-if(nrow(first_stage5_date) == 0) {
-  first_stage5_date = data.frame(code = zcode,
-                                 species = zspp,
-                                 date = NA)
-}
-
 
 if(any(spp.nesting %in% c("GREG", "GBHE"))) {
  brood_sizes <- wrangled_s123$brood.sizes %>% 

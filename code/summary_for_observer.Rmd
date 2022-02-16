@@ -390,7 +390,7 @@ phenology_text <- zyear_phenology %>%
 
 
   } else {
-    phenology_text = ""
+    phenology_text <- data.frame(phenology.text = "")
   }
 }else {
 zyear_phenology <- historic_nesters_core_spp %>%

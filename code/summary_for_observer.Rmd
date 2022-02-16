@@ -44,12 +44,12 @@ date.col.width = 0.6
 
 ```{r}
 # input the year you are working with and read in the wrangled Survey123 data
-#zyear = 2021
+zyear = 2021
 wrangled_s123 <- readRDS(here(paste("data/wrangled/wrangled_s123", zyear, sep = "_")))
 
 # input the colony code and species you want to generate a season summary sheet for
 
-#zcode = 3.0
+zcode = 5.0
 
 observers <- read.csv(here("data/HEP_tracking_copy/observers.csv")) %>% 
   filter(SITE.CODE == zcode, year == zyear) %>% 
@@ -94,7 +94,8 @@ obs_list <- seas_summary_observers  %>%
   separate(observers, sep = ";", into = paste("obs", seq(1:out_length))) %>% 
   pivot_longer(cols = contains("obs"), values_to = "observer.name") %>% 
   mutate(observer.name = trimws(observer.name)) %>% 
-  full_join(., observers %>% select(observer.name, Coordinator.))
+  full_join(., observers %>% select(observer.name, Coordinator.)) %>% 
+  distinct(observer.name, Coordinator.)
 
 if(out_length > 2) {
 observers_text <- paste(c(obs_list$observer.name[-length(obs_list$observer.name)], 'and', obs_list$observer.name[length(obs_list$observer.name)]), collapse = ", ")
@@ -120,16 +121,9 @@ if(nrow(obs_list) == 1) {
 }
 
 
-dates <- wrangled_s123$dates %>% 
-  filter(code == zcode)
-
-total.surveys = nrow(dates)
-  
-top_table <- data.frame(observers = seas_summary_observers$observers,
-                        total.surveys = nrow(dates),
-                        total.hours = round(as.numeric(sum(dates$end - dates$start)/60),2)) %>% 
-  mutate(observers = gsub("\\*", "", observers))
-
+total.surveys <- wrangled_s123$dates %>% 
+  filter(code == zcode) %>% 
+  nrow()
   
 
 ```
@@ -161,14 +155,17 @@ just.nesters <- total.nests %>%
   filter(tot.nests > 0) %>% 
   select(-tot.nests)
 
-nspp <- distinct(just.nesters, species) %>% nrow()
+spp.nesting <- distinct(just.nesters, species)$species
+nspp <- length(spp.nesting)
+core.spp.nesting <- (filter(just.nesters, species %in% c("GREG", "GBHE")) %>% distinct(species))$species
+nspp.core <- length(core.spp.nesting)
 
 nests.wider <- just.nesters %>% 
   select(-code, -complete.count, -peak.active, -obs.initials) %>% 
   pivot_wider(values_from = total.nests, names_from = date)
 
 curr_year_peakactvnsts <- wrangled_s123$nests %>% 
-  filter(code == zcode, species %in% distinct(just.nesters, species)$species, peak.active == TRUE) %>% 
+  filter(code == zcode, species %in% spp.nesting, peak.active == TRUE) %>% 
   select(species, code, date, total.nests) %>% 
   group_by(species) %>% 
   filter(total.nests == max(total.nests)) %>% 
@@ -180,11 +177,12 @@ curr_year_peakactvnsts <- wrangled_s123$nests %>%
 peakactive_text <- curr_year_peakactvnsts %>% 
   mutate(row.num = row_number(),
          md.text = paste(month(date, label = TRUE, abbr = FALSE), day(date)),
+         nest.text = ifelse(peakactvnsts == 1, "nest", "nests"),
          peakactive.text = ifelse(row.num == 1,
-                                  paste("At ", site_name$site.name, " the peak number of active nests was", peakactvnsts, " ", translate_bird_names(species, "alpha.code", "common.name"), " nests, observed on ", md.text, sep = ""),
+                                  paste("At ", site_name$site.name, " the peak number of active nests was ", peakactvnsts, " ", translate_bird_names(species, "alpha.code", "common.name"), " ", nest.text, ", observed on ", md.text, sep = ""),
                                   ifelse(row.num == max(row.num),
-                                  paste(", and ", peakactvnsts, " ", translate_bird_names(species, "alpha.code", "common.name"), " nests, observed on ", md.text, sep = ""),
-                                  paste(",  ", peakactvnsts, " ", translate_bird_names(species, "alpha.code", "common.name"), " nests, observed on ", md.text, sep = "")))) %>% 
+                                  paste(", and ", peakactvnsts, " ", translate_bird_names(species, "alpha.code", "common.name"), " ", nest.text, ", observed on ", md.text, sep = ""),
+                                  paste(",  ", peakactvnsts, " ", translate_bird_names(species, "alpha.code", "common.name"), " ", nest.text, ", observed on ", md.text, sep = "")))) %>% 
   summarise(peakactive.text = paste(peakactive.text, collapse = "")) %>% 
   mutate(peakactive.text = paste(peakactive.text, ".", sep = ""))
     
@@ -256,9 +254,9 @@ nest_totals$sub_table5  %>% shared_nest_total_table()
 \newpage
 How does `r zyear` compare with previous years? Below is a plot of this year's peak nest abundance along with the historic nest abundance.    
 
-```{r fig.width=8, fig.height=5.3 * nspp}
+```{r fig.width=8, fig.height=ifelse(nspp > 1, 10.6, 5.3)}
 historic_nest_abund <- readRDS(here("data/hep_annual_nest_abundance")) %>% 
-  filter(code == zcode, species %in% just.nesters$species) %>% 
+  filter(code == zcode, species %in% spp.nesting, peakactvnsts >= 0) %>% 
   ungroup() %>% 
   select(year, species, peakactvnsts) %>% 
   bind_rows(curr_year_peakactvnsts %>% select(year, species, peakactvnsts)) %>% 
@@ -268,7 +266,7 @@ historic_nest_abund4plot <- expand.grid(species = distinct(historic_nest_abund, 
                   year = seq(min(historic_nest_abund$year), max(historic_nest_abund$year))) %>% 
   full_join(historic_nest_abund) %>% 
   group_by(species) %>% 
-  mutate(lab.na = max(peakactvnsts, na.rm = TRUE)/10) %>% 
+  mutate(lab.na = max(peakactvnsts, na.rm = TRUE)/15) %>% 
   ungroup()
 
 
@@ -294,9 +292,9 @@ historic_nest_abund4plot %>%
 
 ```{r}
 
-if(any(just.nesters$species %in% c("GREG", "GBHE"))) {
+if(any(spp.nesting %in% c("GREG", "GBHE"))) {
 nest_stages_df <- wrangled_s123$stages %>% 
-  filter(code == zcode, species %in% distinct(just.nesters, species)$species) %>% 
+  filter(code == zcode, species %in% core.spp.nesting) %>% 
   mutate(stage = paste("stage", stage, sep = ".")) %>% 
   arrange(date) %>% 
   mutate(date = as.character(date),
@@ -311,12 +309,12 @@ nest_stages_df <- wrangled_s123$stages %>%
 
 }
 
-if(any(just.nesters$species %in% c("GREG", "GBHE"))) {
+if(any(spp.nesting %in% c("GREG", "GBHE"))) {
 
 zyear_phenology <- wrangled_s123$stages %>% 
   mutate(phen.rop = case_when(species == "GBHE" & which.rop == "rop.4" ~ TRUE,
                               species == "GREG" & which.rop == "rop.5" ~ TRUE)) %>% 
-  filter(code == zcode, species %in% distinct(just.nesters, species)$species, phen.rop == TRUE)  %>% 
+  filter(code == zcode, species %in% core.spp.nesting, phen.rop == TRUE)  %>% 
   mutate(stage = paste("phen.stage", stage, sep = "")) %>% 
   pivot_wider(id_cols = species, names_from = stage, values_from = num.nests) %>% 
   mutate(across(contains("phen.stage"), ~replace_na(., 0)),
@@ -343,12 +341,12 @@ phenology_text <- zyear_phenology %>%
 The proportion of nests that have reached the unguarded stage (Stages 4 and 5) by the May (Great Blue Heron) or June (Great Egret) Regional Nest Observation Period is a useful metric for us to gauge the intra-seasonal timing of nesting. A larger than average proportion of unguarded nests suggests that the birds began nesting earlier that year than normal. `r phenology_text$phenology.text`   
 
 ```{r}
-if(any(just.nesters$species %in% c("GREG", "GBHE"))) {
+if(any(spp.nesting %in% c("GREG", "GBHE"))) {
 nest_stages <- nest_stages_df %>%
   date_table_splitter(num_dates_per_split = 9)
 }
 
-hlines.stages <- 5 * seq(1:nspp)
+hlines.stages <- 5 * seq(1:nspp.core)
 
 
 shared_stages_table <- function(ft) {
@@ -361,7 +359,7 @@ shared_stages_table <- function(ft) {
                       stage = "Stage") %>% 
     align(j = -1, align = "center", part = "all") %>%
     border_remove() %>%
-    border(i = hlines.stages, border.bottom = fp_border())%>%
+    border(i = hlines.stages, border.bottom = fp_border()) %>%
     border(border.top = fp_border(), part = "header", i = 1) %>%
     border(border.bottom = fp_border(), part = "header", i = 1, j = seq(3, ncol.ztable)) %>%
     border(border.bottom = fp_border(), part = "header", i = 2) %>%
@@ -377,13 +375,13 @@ shared_stages_table <- function(ft) {
 
 Number of nests at each stage on each visit date (clearly observed nests only):
 ```{r}
-if(any(just.nesters$species %in% c("GREG", "GBHE"))) {
+if(any(spp.nesting %in% c("GREG", "GBHE"))) {
 nest_stages$sub_table1 %>% shared_stages_table()
 }
 ```
 
 ```{r}
-if(any(just.nesters$species %in% c("GREG", "GBHE"))) {
+if(any(spp.nesting %in% c("GREG", "GBHE"))) {
   if(!is.null(nest_stages$sub_table2)) {
 nest_stages$sub_table2 %>% shared_stages_table()
   }
@@ -391,7 +389,7 @@ nest_stages$sub_table2 %>% shared_stages_table()
 ```
 
 ```{r}
-if(any(just.nesters$species %in% c("GREG", "GBHE"))) {
+if(any(spp.nesting %in% c("GREG", "GBHE"))) {
   if(!is.null(nest_stages$sub_table3)) {
 nest_stages$sub_table3 %>% shared_stages_table()
   }
@@ -399,7 +397,7 @@ nest_stages$sub_table3 %>% shared_stages_table()
 ```
 
 ```{r}
-if(any(just.nesters$species %in% c("GREG", "GBHE"))) {
+if(any(spp.nesting %in% c("GREG", "GBHE"))) {
   if(!is.null(nest_stages$sub_table4)) {
 nest_stages$sub_table4 %>% shared_stages_table()
   }
@@ -407,7 +405,7 @@ nest_stages$sub_table4 %>% shared_stages_table()
 ```
 
 ```{r}
-if(any(just.nesters$species %in% c("GREG", "GBHE"))) {
+if(any(spp.nesting %in% c("GREG", "GBHE"))) {
   if(!is.null(nest_stages$sub_table5)) {
 nest_stages$sub_table5 %>% shared_stages_table()
   }
@@ -417,9 +415,9 @@ nest_stages$sub_table5 %>% shared_stages_table()
 
 \newpage
 How does this compare to previous years?  
-```{r fig.width=8, fig.height=5.3 * nspp}
+```{r fig.width=8, fig.height=5.3 * nspp.core}
 historic_phenology <- readRDS(here("data/hep_annual_phenology")) %>% 
-  filter(code == zcode, species %in% just.nesters$species) %>% 
+  filter(code == zcode, species %in% core.spp.nesting) %>% 
   ungroup() %>% 
   bind_rows(zyear_phenology %>%  mutate(year = zyear)) %>% 
   mutate(species = translate_bird_names(species, "alpha.code", "common.name"))
@@ -460,7 +458,7 @@ historic_phenology %>%
 ```{r}
 # stage 4 brood sizes
 first_stage5_date <- wrangled_s123$stages %>% 
-  filter(code == zcode, species %in% distinct(just.nesters, species)$species) %>%
+  filter(code == zcode, species %in% spp.nesting) %>%
   filter(stage == 5, num.nests > 0) %>% 
   filter(date == min(date)) %>% 
   select(code, species, date)
@@ -472,9 +470,9 @@ if(nrow(first_stage5_date) == 0) {
 }
 
 
-if(any(just.nesters$species %in% c("GREG", "GBHE"))) {
+if(any(spp.nesting %in% c("GREG", "GBHE"))) {
  brood_sizes <- wrangled_s123$brood.sizes %>% 
-  filter(code == zcode, species %in% distinct(just.nesters, species)$species) %>% 
+  filter(code == zcode, species %in% core.spp.nesting) %>% 
   group_by(date, species) %>% 
   mutate(max.num.nest = max(num.nests)) %>% 
   ungroup() %>% 
@@ -504,9 +502,9 @@ brood_sizes_wide <- brood_sizes %>%
 }
 }
 
-if(any(just.nesters$species %in% c("GREG", "GBHE"))) {
+if(any(spp.nesting %in% c("GREG", "GBHE"))) {
 zyear_productivity <- wrangled_s123$brood.sizes %>% 
-  filter(code == zcode, species %in% distinct(just.nesters, species)$species, brd.size.date == TRUE) %>%
+  filter(code == zcode, species %in% core.spp.nesting, brd.size.date == TRUE) %>%
   mutate(brd = paste("brd", brd, sep = ""),
          year = zyear) %>% 
   pivot_wider(id_cols = c(code, year, species), names_from = brd, values_from = num.nests) %>% 
@@ -546,7 +544,7 @@ nbrood_rows <- brood_sizes %>%
   ungroup() %>% 
   mutate(nbrood.rows = cumsum(nbrood.rows))
 
-if(any(just.nesters$species %in% c("GREG", "GBHE"))) {
+if(any(spp.nesting %in% c("GREG", "GBHE"))) {
 flextable(brood_sizes_wide) %>% 
     set_header_labels(species = "Species",
                       date = "Date",
@@ -575,9 +573,9 @@ flextable(brood_sizes_wide) %>%
 \newpage
 How does this compare to previous years? 
 
-```{r fig.width=8, fig.height=5.3 * nspp}
+```{r fig.width=8, fig.height=5.3 * nspp.core}
 historic_productivity <- readRDS(here("data/hep_annual_new_productivity")) %>% 
-  filter(code == zcode, species %in% just.nesters$species) %>% 
+  filter(code == zcode, species %in% core.spp.nesting) %>% 
   ungroup() %>% 
   bind_rows(zyear_productivity)
 

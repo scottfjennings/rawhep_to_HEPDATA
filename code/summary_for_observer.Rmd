@@ -43,7 +43,7 @@ wrangled_s123 <- readRDS(here(paste("data/wrangled/wrangled_s123", zyear, sep = 
 
 # input the colony code and species you want to generate a season summary sheet for
 
-#zcode = 5.0
+#zcode = 57.0
 
 observers <- read.csv(here("data/HEP_tracking_copy/observers.csv")) %>% 
   filter(SITE.CODE == zcode, year == zyear) %>% 
@@ -558,16 +558,16 @@ brood_sizes_wide <- brood_sizes %>%
   brood_sizes_wide <- data.frame(species = NA,
                                  date = NA,
                                  stage5.nests = NA,
-                                 brd.1 = NA,
-                                 brd.2 = NA,
-                                 brd.3 = NA,
-                                 brd.4 = NA,
-                                 brd.5 = NA)
+                                 brd1 = NA,
+                                 brd2 = NA,
+                                 brd3 = NA,
+                                 brd4 = NA,
+                                 brd5 = NA)
 }
 }
 
 
-if(nrow(brood_sizes > 0)) {
+if(nrow(brood_sizes) > 0) {
 if(any(spp.nesting %in% c("GREG", "GBHE"))) {
 zyear_productivity <- wrangled_s123$brood.sizes %>% 
   filter(code == zcode, species %in% core.spp.nesting, brd.size.date == TRUE) %>%
@@ -593,8 +593,9 @@ brood_sizes_text <- zyear_productivity %>%
   mutate(brood.sizes.text = paste(brood.sizes.text, ".", sep = ""))
 }
 } else {
-  zyear_productivity = brood_sizes_wide %>% 
-    mutate(mean.chx.per.nest = NA,
+  zyear_productivity = historic_nesters_core_spp %>% 
+    mutate(year = zyear,
+           mean.chx.per.nest = NA,
            sd.chx.per.nest = NA,
            st.err.chx.per.nest = NA)
   brood_sizes_text = data.frame(brood.sizes.text = paste("Brood size was not observed in any nests at ", site_name$site.name, " in ", zyear, sep = ""))

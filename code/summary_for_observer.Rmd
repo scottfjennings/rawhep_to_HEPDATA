@@ -2,9 +2,6 @@
 title: ""
 output:
   pdf_document: default
-  html_document:
-    df_print: paged
-  word_document: default
 params:
   zyear: 2021
   zcode: 599

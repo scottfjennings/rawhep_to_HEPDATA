@@ -171,7 +171,7 @@ render_summary_for_observer <- function(file = here("code/summary_for_observer.R
     zyear = zyear,
     zcode = zcode
   ), envir = new.env(),
-  output_file = here(paste0("summary_for_observers/", zyear, "/", zcode, "_", zyear, ".docx", sep = ""))
+  output_file = here(paste0("summary_for_observers/", zyear, "/", zcode, "_", zyear, ".pdf", sep = ""))
   )
 }
 

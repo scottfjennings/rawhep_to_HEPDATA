@@ -43,7 +43,7 @@ wrangled_s123 <- readRDS(here(paste("data/wrangled/wrangled_s123", zyear, sep = 
 
 # input the colony code and species you want to generate a season summary sheet for
 
-#zcode = 3.0
+#zcode = 5.0
 
 observers <- read.csv(here("data/HEP_tracking_copy/observers.csv")) %>% 
   filter(SITE.CODE == zcode, year == zyear) %>% 
@@ -155,13 +155,15 @@ historic_nesters_core_spp <- historic_nesters %>%
 
 if(nspp > 0) {
 zyear_nesters_text_df <- zyear_nesters %>% 
+  distinct(species) %>% 
   mutate(species = translate_bird_names(species, "alpha.code", "common.name"))
-if(nspp > 2) {
-zyear_nesters_text <- paste(c(zyear_nesters_text_df$species[-length(zyear_nesters_text_df$species)], 'and', zyear_nesters_text_df$species[length(zyear_nesters_text_df$species)]), collapse = ", ")
-} else {
-zyear_nesters_text <- paste(zyear_nesters_text_df$species, collapse = " and ")  
-}
-zyear_nesters_text <- paste(zyear_nesters_text_df$species, " were observed nesting at ", site_name$site.name, " in ", zyear, ".", sep = "")
+    if(nspp > 2) {
+    zyear_nesters_text <- paste(c(zyear_nesters_text_df$species[-length(zyear_nesters_text_df$species)], 'and', zyear_nesters_text_df$species[length(zyear_nesters_text_df$species)]), collapse = ", ")
+    } else {
+    zyear_nesters_text <- paste(zyear_nesters_text_df$species, collapse = " and ")  
+    }
+
+zyear_nesters_text <- paste(zyear_nesters_text, " were observed nesting at ", site_name$site.name, " in ", zyear, ".", sep = "")
 
 } else {
   zyear_nesters_text = data.frame(peakactvnsts = paste("There was no ardeid nesting activity observed at ", site_name$site.name, " in ", zyear, ".", sep = ""))
@@ -187,17 +189,13 @@ zfig.height.core = ifelse(nrow(historic_nesters_core_spp) > 1, 10.6, 5.3)
 
 `r zyear_nesters_text` `r historic_nesters_text`
 
-<br>
-
+\newpage
 **Colony Size Estimate**  
 
 ```{r}
 
 
 if(nspp > 0) {
-nests.wider <- zyear_nesters %>% 
-  select(-code, -complete.count, -peak.active, -obs.initials) %>% 
-  pivot_wider(values_from = total.nests, names_from = date)
 
 
 curr_year_peakactvnsts <- wrangled_s123$nests %>% 
@@ -226,7 +224,7 @@ peakactive_text <- curr_year_peakactvnsts %>%
   curr_year_peakactvnsts <- data.frame(species = distinct(wrangled_s123$nests, species)$species,
                                        peakactvnsts = 0,
                                        year = zyear)
-  peakactive_text <- data.frame(peakactvnsts = paste("There was no ardeid nesting activity observed at ", site_name$site.name, " in ", zyear, ".", sep = "")) 
+  peakactive_text <- data.frame(peakactive.text = paste("There was no ardeid nesting activity observed at ", site_name$site.name, " in ", zyear, ".", sep = "")) 
   
 }
     
@@ -239,7 +237,10 @@ One of the main pieces of information observers collect each visit is the total 
 
 ```{r}
 if(nspp > 0) {
-nest_totals <- nests.wider %>% 
+nest_totals <- zyear_nesters %>% 
+  select(-code, -complete.count, -peak.active, -obs.initials, -multiple.survey.num) %>% 
+  mutate(date = paste(month(date), day(date), sep = "-")) %>% 
+  pivot_wider(values_from = total.nests, names_from = date) %>% 
   mutate(species = translate_bird_names(species, "alpha.code", "common.name")) %>% 
   rename(Species = species) %>% 
   date_table_splitter(num_dates_per_split = 9)
@@ -343,7 +344,7 @@ historic_nest_abund4plot %>%
 ```
 
 
-<br>
+\newpage
 **Seasonal Timing**  
 
 
@@ -354,9 +355,7 @@ nest_stages_df <- wrangled_s123$stages %>%
   filter(code == zcode, species %in% core.spp.nesting) %>% 
   mutate(stage = paste("stage", stage, sep = ".")) %>% 
   arrange(date) %>% 
-  mutate(date = as.character(date),
-         date = gsub(paste(zyear, "-", sep = ""), "", date),
-         date = ifelse(multiple.survey.num > 1, paste(date, multiple.survey.num, sep = "."), date),
+  mutate(date = paste(month(date), day(date), sep = "-"),
          num.nests = as.character(num.nests)) %>% 
   select(-multiple.survey.num) %>% 
   pivot_wider(id_cols = c(species, stage), names_from = date, values_from = num.nests) %>% 
@@ -526,6 +525,8 @@ historic_phenology %>%
 
 
 ```
+\newpage
+**Productivity**  
 
 <br>
 
@@ -549,6 +550,7 @@ brood_sizes_wide <- brood_sizes %>%
   pivot_wider(id_cols = c(species, date, stage5.nests), values_from = num.nests, names_from = brd) %>% 
   mutate(date = ymd(date)) %>% 
   arrange(species, date) %>% 
+  mutate(date = paste(month(date), day(date), sep = "-")) %>% 
   group_by(species) %>% 
   mutate(species = ifelse(date == min(date), translate_bird_names(species, "alpha.code", "common.name"), "")) %>% 
   select(species, date, everything())
@@ -607,8 +609,6 @@ brood_sizes_text <- zyear_productivity %>%
   
 }
 ```
-<br>
-**Productivity**  
 
 We use data on the number of Stage 4 chicks to estimate the average prefledging brood size for the colony, which we use as a measure of how successful the colony is at reproducing. Because Stage 5 chicks may move into neighboring nests, we calculate the number of Stage 4 chicks per nest only on the latest date when there are still no Stage 5 chicks observed in the colony. `r brood_sizes_text$brood.sizes.text`   
 <br>
@@ -684,7 +684,7 @@ historic_productivity4plot %>%
 ```
 
 
-<br>
+\newpage
 **Disturbance to colony**  
 
 The observers also collected information on disturbance to the colony, including the presence and nesting status of any potential nest predators. This information can help us understand potential causes of nest failure or colony abandonment.

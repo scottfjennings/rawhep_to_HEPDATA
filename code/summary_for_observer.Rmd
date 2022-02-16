@@ -21,13 +21,10 @@ knitr::opts_chunk$set(echo = FALSE,
 
 library(tidyverse)
 library(lubridate)
-library(RColorBrewer)
-library(rhandsontable)
 library(flextable)
 library(officer)
 library(here)
 library(knitr)
-library(xlsx)
 library(birdnames)
 
 source("https://raw.githubusercontent.com/scottfjennings/rawhep_to_HEPDATA/main/code/append_species_not_nesting.R")
@@ -157,14 +154,14 @@ historic_nesters_core_spp <- historic_nesters %>%
 
 
 if(nspp > 0) {
-zyear_nesters_text <- zyear_nesters %>% 
+zyear_nesters_text_df <- zyear_nesters %>% 
   mutate(species = translate_bird_names(species, "alpha.code", "common.name"))
 if(nspp > 2) {
-zyear_nesters_text <- paste(c(zyear_nesters_text$species[-length(zyear_nesters_text$species)], 'and', zyear_nesters_text$species[length(zyear_nesters_text$species)]), collapse = ", ")
+zyear_nesters_text <- paste(c(zyear_nesters_text_df$species[-length(zyear_nesters_text_df$species)], 'and', zyear_nesters_text_df$species[length(zyear_nesters_text_df$species)]), collapse = ", ")
 } else {
-zyear_nesters_text <- paste(zyear_nesters_text$species, collapse = " and ")  
+zyear_nesters_text <- paste(zyear_nesters_text_df$species, collapse = " and ")  
 }
-zyear_nesters_text <- paste(zyear_nesters_text$species, " were observed nesting at ", site_name$site.name, " in ", zyear, ".", sep = "")
+zyear_nesters_text <- paste(zyear_nesters_text_df$species, " were observed nesting at ", site_name$site.name, " in ", zyear, ".", sep = "")
 
 } else {
   zyear_nesters_text = data.frame(peakactvnsts = paste("There was no ardeid nesting activity observed at ", site_name$site.name, " in ", zyear, ".", sep = ""))

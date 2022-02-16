@@ -43,7 +43,7 @@ wrangled_s123 <- readRDS(here(paste("data/wrangled/wrangled_s123", zyear, sep = 
 
 # input the colony code and species you want to generate a season summary sheet for
 
-#zcode = 73.0
+#zcode = 90.1
 
 observers <- read.csv(here("data/HEP_tracking_copy/observers.csv")) %>% 
   filter(SITE.CODE == zcode, year == zyear) %>% 
@@ -366,7 +366,7 @@ nest_stages_df <- wrangled_s123$stages %>%
 
 }
 
-if(any(spp.nesting %in% c("GREG", "GBHE"))) {
+  if(any(spp.nesting %in% c("GREG", "GBHE"))) {
 
 zyear_phenology <- wrangled_s123$stages %>% 
   mutate(phen.rop = case_when(species == "GBHE" & which.rop == "rop.4" ~ TRUE,
@@ -389,7 +389,9 @@ phenology_text <- zyear_phenology %>%
   mutate(phenology.text = paste(phenology.text, ".", sep = ""))
 
 
-}
+  } else {
+    phenology_text = ""
+  }
 }else {
 zyear_phenology <- historic_nesters_core_spp %>%
   mutate(year = zyear,
@@ -569,7 +571,7 @@ brood_sizes_wide <- brood_sizes %>%
 
 
 if(nrow(brood_sizes) > 0) {
-if(any(spp.nesting %in% c("GREG", "GBHE"))) {
+  if(any(spp.nesting %in% c("GREG", "GBHE"))) {
 zyear_productivity <- wrangled_s123$brood.sizes %>% 
   filter(code == zcode, species %in% core.spp.nesting, brd.size.date == TRUE) %>%
   mutate(brd = paste("brd", brd, sep = ""),
@@ -592,7 +594,9 @@ brood_sizes_text <- zyear_productivity %>%
                                     paste(" and the average number of ", species, " chicks fledged per nest was ", round(mean.chx.per.nest, 2), " (SE = ", round(st.err.chx.per.nest, 2), ")", sep = "")))  %>% 
   summarise(brood.sizes.text = paste(brood.sizes.text, collapse = " ")) %>% 
   mutate(brood.sizes.text = paste(brood.sizes.text, ".", sep = ""))
-}
+  } else {
+    brood_sizes_text <- data.frame(brood.sizes.text = "")
+  }
 } else {
   zyear_productivity = historic_nesters_core_spp %>% 
     mutate(year = zyear,

@@ -244,9 +244,9 @@ make_date_flextable <- function(date_subtable) {
   out_date_flextable <- date_subtable %>%
     flextable() %>%
   autofit() %>% 
-  fit_to_width(max_width = 8.5) %>% 
-  width(j = 1:3, width = lead.col.width) %>% 
-  width(j = 4:ncol(date_subtable), width = date.col.width)
+  fit_to_width(max_width = 8.5) #%>% 
+  #width(j = 1:3, width = lead.col.width) %>% 
+  #width(j = 4:ncol(date_subtable), width = date.col.width)
 return(out_date_flextable)
   }
 

@@ -1,7 +1,6 @@
 ---
 title: ''
 output:
-  word_document: default
   pdf_document: default
 params:
   zyear: 2021

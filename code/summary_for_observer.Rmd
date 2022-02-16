@@ -492,6 +492,7 @@ nest_stages$sub_table5 %>% shared_stages_table()
 \newpage
 How does this compare to previous years?  
 ```{r fig.width=8, fig.height=zfig.height.core}
+if(nrow(historic_nesters_core_spp) > 0) {
 historic_phenology <- readRDS(here("data/hep_annual_phenology")) %>% 
   filter(code == zcode, species %in% historic_nesters$species & species %in% c("GBHE", "GREG")) %>% 
   ungroup() %>% 
@@ -526,7 +527,7 @@ historic_phenology %>%
        fill = "") +
   facet_wrap(~species, ncol = 1, scales = "free_x")
 
-
+}
 ```
 \newpage
 **Productivity**  
@@ -661,6 +662,7 @@ flextable(brood_sizes_wide) %>%
 How does this compare to previous years? 
 
 ```{r fig.width=8, fig.height=zfig.height.core}
+if(nrow(historic_nesters_core_spp) > 0) {
 historic_productivity <- readRDS(here("data/hep_annual_new_productivity")) %>% 
   filter(code == zcode, species %in% historic_nesters_core_spp$species) %>% 
   ungroup() %>% 
@@ -685,7 +687,7 @@ historic_productivity4plot %>%
        x = "",
        title = "Productivity (X = no data)") +
   facet_wrap(~species, ncol = 1, scales = "free_x")
-
+}
 
 ```
 

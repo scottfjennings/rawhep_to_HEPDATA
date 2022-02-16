@@ -196,7 +196,7 @@ disturbance_response_to_text <- function(dist.response.field) {
                                   dist.response.field == 1 ~ "behavioral response", 
                                   dist.response.field == 2 ~ "nest failure",
                                   dist.response.field == 3 ~ "abandonment of colony", 
-                                  dist.response.field == 4 ~ "pre‐season disturbance")
+                                  dist.response.field == 4 ~ "preseason disturbance")
 return(dist.response.field)
   }
 

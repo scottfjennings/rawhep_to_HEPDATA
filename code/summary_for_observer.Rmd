@@ -43,7 +43,7 @@ wrangled_s123 <- readRDS(here(paste("data/wrangled/wrangled_s123", zyear, sep = 
 
 # input the colony code and species you want to generate a season summary sheet for
 
-#zcode = 57.0
+#zcode = 73.0
 
 observers <- read.csv(here("data/HEP_tracking_copy/observers.csv")) %>% 
   filter(SITE.CODE == zcode, year == zyear) %>% 
@@ -221,9 +221,10 @@ peakactive_text <- curr_year_peakactvnsts %>%
   summarise(peakactive.text = paste(peakactive.text, collapse = "")) %>% 
   mutate(peakactive.text = paste(peakactive.text, ".", sep = ""))
 } else {
-  curr_year_peakactvnsts <- data.frame(species = distinct(wrangled_s123$nests, species)$species,
-                                       peakactvnsts = 0,
-                                       year = zyear)
+  curr_year_peakactvnsts <- historic_nesters %>% 
+    mutate(peakactvnsts = 0,
+           year = zyear)
+                                       
   peakactive_text <- data.frame(peakactive.text = paste("There was no ardeid nesting activity observed at ", site_name$site.name, " in ", zyear, ".", sep = "")) 
   
 }

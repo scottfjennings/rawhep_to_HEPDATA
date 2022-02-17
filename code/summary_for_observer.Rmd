@@ -38,12 +38,12 @@ date.col.width = 0.6
 
 ```{r}
 # input the year you are working with and read in the wrangled Survey123 data
-#zyear = 2021
+# zyear = 2021
 wrangled_s123 <- readRDS(here(paste("data/wrangled/wrangled_s123", zyear, sep = "_")))
 
 # input the colony code and species you want to generate a season summary sheet for
 
-#zcode = 94.0
+# zcode = 146.1
 
 observers <- read.csv(here("data/HEP_tracking_copy/observers.csv")) %>% 
   filter(SITE.CODE == zcode, year == zyear) %>% 
@@ -315,7 +315,10 @@ How does `r zyear` compare with previous years? Below is a plot of this year's p
 historic_nest_abund <- readRDS(here("data/hep_annual_nest_abundance")) %>% 
   filter(code == zcode, peakactvnsts >= 0) %>% 
   ungroup() %>% 
-  select(year, species, peakactvnsts) %>% 
+  select(year, species, peakactvnsts) 
+
+if(nrow(historic_nest_abund) > 0) {
+historic_nest_abund <- historic_nest_abund %>% 
   bind_rows(curr_year_peakactvnsts %>% select(year, species, peakactvnsts)) %>% 
   bind_rows(wrangled_s123$nests %>% 
               filter(code == zcode, (!species %in% spp.nesting & species %in% historic_nesters$species)) %>% 
@@ -345,7 +348,9 @@ historic_nest_abund4plot %>%
        title = "Peak number of active nests (X = no data)",
        fill = "") +
   facet_wrap(~species, ncol = ceiling(distinct(historic_nest_abund4plot, species) %>% nrow()/2), scales = "free")
-
+} else {
+  print(paste("There is no data on nesting activity at ", site_name$site.name, " in previous years.", sep = ""))
+}
 
 ```
 
@@ -509,19 +514,21 @@ nest_stages$sub_table5 %>% shared_stages_table()
 }
 ```
  
-```{r results='asis'}
+```{r, echo=FALSE, results='asis'}
 if(any(spp.nesting %in% c("GREG", "GBHE"))) {
-  print(
  cat("\n\n\\pagebreak\nHow does this compare to previous years?")
-  )
 }
 ```  
+  
   
 ```{r fig.width=8, fig.height=zfig.height.core}
 if(length(core.spp.nesting) > 0) {
 historic_phenology <- readRDS(here("data/hep_annual_phenology")) %>% 
   filter(code == zcode, species %in% historic_nesters$species & species %in% c("GBHE", "GREG")) %>% 
-  ungroup() %>% 
+  ungroup() 
+
+if(nrow(historic_phenology) > 0) {
+historic_phenology <- historic_phenology %>% 
   bind_rows(zyear_phenology %>%  mutate(year = zyear)) %>% 
   mutate(species = translate_bird_names(species, "alpha.code", "common.name"))
 
@@ -552,6 +559,9 @@ historic_phenology %>%
        title = "Intraseasonal timing (horizontal line is long term average; X = no data)",
        fill = "") +
   facet_wrap(~species, ncol = 1, scales = "free_x")
+} else {
+  print(paste("There is no data on nesting activity at ", site_name$site.name, " in previous years.", sep = ""))
+}
 
 }
 ```
@@ -559,9 +569,7 @@ historic_phenology %>%
  
 ```{r results='asis'}
 if(any(spp.nesting %in% c("GREG", "GBHE"))) {
-  print(
  cat("\n\n\\pagebreak\n")
-  )
 }
 ```  
   
@@ -689,11 +697,9 @@ flextable(brood_sizes_wide) %>%
 
 
  
-```{r results='asis'}
+```{r, echo=FALSE, results='asis'}
 if(any(spp.nesting %in% c("GREG", "GBHE"))) {
-  print(
  cat("\n\n\\pagebreak\nHow does this compare to previous years?")
-  )
 }
 ```  
   
@@ -702,7 +708,11 @@ if(any(spp.nesting %in% c("GREG", "GBHE"))) {
 if(length(core.spp.nesting) > 0) {
 historic_productivity <- readRDS(here("data/hep_annual_new_productivity")) %>% 
   filter(code == zcode, species %in% historic_nesters_core_spp$species) %>% 
-  ungroup() %>% 
+  ungroup() 
+
+if(nrow(historic_productivity) > 0) {
+
+historic_productivity <- historic_productivity %>% 
   bind_rows(zyear_productivity)
 
 historic_productivity4plot <- expand.grid(species = historic_nesters_core_spp$species,
@@ -724,6 +734,10 @@ historic_productivity4plot %>%
        x = "",
        title = "Productivity (X = no data)") +
   facet_wrap(~species, ncol = 1, scales = "free_x")
+} else {
+  print(paste("There is no data on nesting activity at ", site_name$site.name, " in previous years.", sep = ""))
+}
+
 }
 
 ```
@@ -731,9 +745,7 @@ historic_productivity4plot %>%
  
 ```{r results='asis'}
 if(any(spp.nesting %in% c("GREG", "GBHE"))) {
-  print(
  cat("\n\n\\pagebreak\n")
-  )
 }
 ```  
   

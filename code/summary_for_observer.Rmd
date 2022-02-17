@@ -30,8 +30,6 @@ library(birdnames)
 source("https://raw.githubusercontent.com/scottfjennings/rawhep_to_HEPDATA/main/code/append_species_not_nesting.R")
 source("https://raw.githubusercontent.com/scottfjennings/rawhep_to_HEPDATA/main/code/rawhep_to_HEPDATA_utility_functions.R")
 options(scipen = 999)
-lead.col.width = c(1, 0.6, 0.75)
-date.col.width = 0.6
 
 
 ```
@@ -43,7 +41,7 @@ wrangled_s123 <- readRDS(here(paste("data/wrangled/wrangled_s123", zyear, sep = 
 
 # input the colony code and species you want to generate a season summary sheet for
 
-# zcode = 146.1
+# zcode = 57.0
 
 observers <- read.csv(here("data/HEP_tracking_copy/observers.csv")) %>% 
   filter(SITE.CODE == zcode, year == zyear) %>% 
@@ -246,7 +244,7 @@ nest_totals <- zyear_nesters %>%
   pivot_wider(values_from = total.nests, names_from = date) %>% 
   mutate(species = translate_bird_names(species, "alpha.code", "common.name")) %>% 
   rename(Species = species) %>% 
-  date_table_splitter(num_dates_per_split = 9)
+  date_table_splitter(num.lead.cols = 1, num_dates_per_split = 9)
 
 # define shared settings for colony size tables
 shared_nest_total_table <- function(ft) {

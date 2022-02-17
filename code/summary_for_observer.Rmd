@@ -43,7 +43,7 @@ wrangled_s123 <- readRDS(here(paste("data/wrangled/wrangled_s123", zyear, sep = 
 
 # input the colony code and species you want to generate a season summary sheet for
 
-#zcode = 5.0
+#zcode = 94.0
 
 observers <- read.csv(here("data/HEP_tracking_copy/observers.csv")) %>% 
   filter(SITE.CODE == zcode, year == zyear) %>% 
@@ -355,8 +355,9 @@ historic_nest_abund4plot %>%
 
 
 ```{r}
-if(nspp > 0) {
-if(any(spp.nesting %in% c("GREG", "GBHE"))) {
+if(nspp > 0) { # if there were species nesting in the colony
+if(any(spp.nesting %in% c("GREG", "GBHE"))) { # and if those species were GREG or GBHE:
+  # reshape stage data to present in the summary
 nest_stages_df <- wrangled_s123$stages %>% 
   filter(code == zcode, species %in% core.spp.nesting) %>% 
   mutate(stage = paste("stage", stage, sep = ".")) %>% 
@@ -368,17 +369,20 @@ nest_stages_df <- wrangled_s123$stages %>%
   mutate(stage = gsub("stage.", "", stage)) %>% 
   mutate(species = ifelse(stage == 1, translate_bird_names(species, "alpha.code", "common.name"), "")) %>% 
   rename(Species = species)
-
-zyear_phenology <- wrangled_s123$stages %>% 
+# check for stage data during the appropriate ROPs
+phen_stages <- wrangled_s123$stages %>% 
   mutate(phen.rop = case_when(species == "GBHE" & which.rop == "rop.4" ~ TRUE,
                               species == "GREG" & which.rop == "rop.5" ~ TRUE)) %>% 
-  filter(code == zcode, species %in% core.spp.nesting, phen.rop == TRUE)  %>% 
+  filter(code == zcode, species %in% core.spp.nesting, phen.rop == TRUE) 
+      if(nrow(phen_stages > 0)) { # if there was stage data during the appropriate ROPs
+        # use it to calculate proportion unguarded
+zyear_phenology <- phen_stages %>% 
   mutate(stage = paste("phen.stage", stage, sep = "")) %>% 
   pivot_wider(id_cols = species, names_from = stage, values_from = num.nests) %>% 
   mutate(across(contains("phen.stage"), ~replace_na(., 0)),
          phen.prop.unguarded = (phen.stage4 + phen.stage5)/(phen.stage1 + phen.stage2 + phen.stage3 + phen.stage4 + phen.stage5),
          phen.prop.unguarded.se = sqrt((phen.prop.unguarded *(1-phen.prop.unguarded)) / (phen.stage1 + phen.stage2 + phen.stage3 + phen.stage4 + phen.stage5)))
-
+# and generate the summary text
 phenology_text <- zyear_phenology %>%
   mutate(row.num = row_number(),
          site.name = site_name$site.name,
@@ -388,7 +392,23 @@ phenology_text <- zyear_phenology %>%
                                  paste(" and the proportion of ", species, " nests that were unguarded was ", round(phen.prop.unguarded, 2), " (SE = ", round(phen.prop.unguarded.se, 2), ")", sep = ""))) %>% 
   summarise(phenology.text = paste(phenology.text, collapse = " ")) %>% 
   mutate(phenology.text = paste(phenology.text, ".", sep = ""))
-
+      } else { # if GBHE or GREG nested but there are no stage data during the appropriate ROPs
+        # create an empty table of proportion unguarded
+        zyear_phenology <- historic_nesters_core_spp %>%
+  mutate(year = zyear,
+         code = zcode,
+         phen.stgedate = NA,
+         phen.stage1 = 0,
+         phen.stage2 = 0,
+         phen.stage3 = 0,
+         phen.stage4 = 0,
+         phen.stage5 = 0,
+         phen.prop.unguarded = NA,
+         phen.prop.unguarded.se = NA)
+# and generate the summary text
+ phenology_text <- data.frame(phenology.text = paste("There was no stage data collected during the appropriate ROPs at ", site_name$site.name, " in ", zyear, ".", sep = "")) 
+  
+      }
 
   } else {
     phenology_text <- data.frame(phenology.text = paste("There was no nesting activity by Great Blue Heron or Great Egret observed at ", site_name$site.name, " in ", zyear, sep = ""))

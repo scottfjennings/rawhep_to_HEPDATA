@@ -38,12 +38,12 @@ date.col.width = 0.6
 
 ```{r}
 # input the year you are working with and read in the wrangled Survey123 data
-#zyear = 2021
+zyear = 2021
 wrangled_s123 <- readRDS(here(paste("data/wrangled/wrangled_s123", zyear, sep = "_")))
 
 # input the colony code and species you want to generate a season summary sheet for
 
-#zcode = 90.1
+zcode = 90.1
 
 observers <- read.csv(here("data/HEP_tracking_copy/observers.csv")) %>% 
   filter(SITE.CODE == zcode, year == zyear) %>% 
@@ -317,6 +317,11 @@ historic_nest_abund <- readRDS(here("data/hep_annual_nest_abundance")) %>%
   ungroup() %>% 
   select(year, species, peakactvnsts) %>% 
   bind_rows(curr_year_peakactvnsts %>% select(year, species, peakactvnsts)) %>% 
+  bind_rows(wrangled_s123$nests %>% 
+              filter(code == zcode, (!species %in% spp.nesting & species %in% historic_nesters$species)) %>% 
+              distinct(species, total.nests) %>% 
+              mutate(year = zyear) %>% 
+              rename(peakactvnsts = total.nests)) %>% 
   mutate(species = translate_bird_names(species, "alpha.code", "common.name"))
 
 historic_nest_abund4plot <- expand.grid(species = distinct(historic_nest_abund, species)$species,
@@ -339,7 +344,7 @@ historic_nest_abund4plot %>%
        x = "",
        title = "Peak number of active nests (X = no data)",
        fill = "") +
-  facet_wrap(~species, ncol = nspp/2, scales = "free")
+  facet_wrap(~species, ncol = ceiling(distinct(historic_nest_abund4plot, species) %>% nrow()/2), scales = "free")
 
 
 ```
@@ -364,10 +369,6 @@ nest_stages_df <- wrangled_s123$stages %>%
   mutate(species = ifelse(stage == 1, translate_bird_names(species, "alpha.code", "common.name"), "")) %>% 
   rename(Species = species)
 
-}
-
-  if(any(spp.nesting %in% c("GREG", "GBHE"))) {
-
 zyear_phenology <- wrangled_s123$stages %>% 
   mutate(phen.rop = case_when(species == "GBHE" & which.rop == "rop.4" ~ TRUE,
                               species == "GREG" & which.rop == "rop.5" ~ TRUE)) %>% 
@@ -390,9 +391,9 @@ phenology_text <- zyear_phenology %>%
 
 
   } else {
-    phenology_text <- data.frame(phenology.text = "")
+    phenology_text <- data.frame(phenology.text = paste("There was no nesting activity by Great Blue Heron or Great Egret observed at ", site_name$site.name, " in ", zyear, sep = ""))
   }
-}else {
+} else {
 zyear_phenology <- historic_nesters_core_spp %>%
   mutate(year = zyear,
          code = zcode,
@@ -405,14 +406,14 @@ zyear_phenology <- historic_nesters_core_spp %>%
          phen.prop.unguarded = NA,
          phen.prop.unguarded.se = NA)
 
- phenology_text <- data.frame(phenology.text = paste("There was no ardeid nesting activity observed at ", site_name$site.name, " in ", zyear, ".", sep = "")) 
+ phenology_text <- data.frame(phenology.text = paste("There was no nesting activity observed at ", site_name$site.name, " in ", zyear, ".", sep = "")) 
   
 }
 ```
 
 <br>
 
-The proportion of nests that have reached the unguarded stage (Stages 4 and 5) by the May (Great Blue Heron) or June (Great Egret) Regional Nest Observation Period is a useful metric for us to gauge the intra-seasonal timing of nesting. A larger than average proportion of unguarded nests suggests that the birds began nesting earlier that year than normal. `r phenology_text$phenology.text`   
+We estimate the intra-seasonal timing of nesting for Great Blue Heron and Great Egret. The proportion of nests that have reached the unguarded stage (Stages 4 and 5) by the May (Great Blue Heron) or June (Great Egret) Regional Nest Observation Period is a useful metric for us to gauge the intra-seasonal timing of nesting. A larger than average proportion of unguarded nests suggests that the birds began nesting earlier that year than normal. `r phenology_text$phenology.text`   
 
 ```{r}
 if(nspp > 0){
@@ -488,11 +489,16 @@ nest_stages$sub_table5 %>% shared_stages_table()
 }
 ```
  
-
-\newpage
-How does this compare to previous years?  
+```{r results='asis'}
+if(any(spp.nesting %in% c("GREG", "GBHE"))) {
+  print(
+ cat("\n\n\\pagebreak\nHow does this compare to previous years?")
+  )
+}
+```  
+  
 ```{r fig.width=8, fig.height=zfig.height.core}
-if(nrow(historic_nesters_core_spp) > 0) {
+if(length(core.spp.nesting) > 0) {
 historic_phenology <- readRDS(here("data/hep_annual_phenology")) %>% 
   filter(code == zcode, species %in% historic_nesters$species & species %in% c("GBHE", "GREG")) %>% 
   ungroup() %>% 
@@ -529,23 +535,28 @@ historic_phenology %>%
 
 }
 ```
-\newpage
+
+ 
+```{r results='asis'}
+if(any(spp.nesting %in% c("GREG", "GBHE"))) {
+  print(
+ cat("\n\n\\pagebreak\n")
+  )
+}
+```  
+  
 **Productivity**  
 
 <br>
 
 ```{r}
 # stage 4 brood sizes
-if(nspp > 0) {
-if(any(spp.nesting %in% c("GREG", "GBHE"))) {
+if(nspp > 0) { # if there were >= 1 nest observed:
+  if(any(spp.nesting %in% c("GREG", "GBHE"))) { # and if GREG or GBHE were nesting:
  brood_sizes <- wrangled_s123$brood.sizes %>% 
-  filter(code == zcode, species %in% core.spp.nesting) %>% 
-  group_by(date, species) %>% 
-  mutate(max.num.nest = max(num.nests)) %>% 
-  ungroup() %>% 
-  filter(max.num.nest > 0) %>% 
-  select(-max.num.nest) 
-if(nrow(brood_sizes) > 0) {
+  filter(code == zcode, species %in% core.spp.nesting)
+    if(nrow(brood_sizes) > 0) { # and if there is brood size data:
+      # pivot wider for display in summary
 brood_sizes_wide <- brood_sizes %>% 
   mutate(brd = paste("brd.", brd, sep = ""),
          year = zyear,
@@ -558,34 +569,20 @@ brood_sizes_wide <- brood_sizes %>%
   group_by(species) %>% 
   mutate(species = ifelse(date == min(date), translate_bird_names(species, "alpha.code", "common.name"), "")) %>% 
   select(species, date, everything())
-} else {
-  brood_sizes_wide <- data.frame(species = NA,
-                                 date = NA,
-                                 stage5.nests = NA,
-                                 brd1 = NA,
-                                 brd2 = NA,
-                                 brd3 = NA,
-                                 brd4 = NA,
-                                 brd5 = NA)
-}
-}
-
-
-if(nrow(brood_sizes) > 0) {
-  if(any(spp.nesting %in% c("GREG", "GBHE"))) {
+# use it to calculate productivity
 zyear_productivity <- wrangled_s123$brood.sizes %>% 
   filter(code == zcode, species %in% core.spp.nesting, brd.size.date == TRUE) %>%
-  mutate(brd = paste("brd", brd, sep = ""),
-         year = zyear) %>% 
-  pivot_wider(id_cols = c(code, year, species), names_from = brd, values_from = num.nests) %>% 
+  mutate(brd = paste("brd", brd, sep = "")) %>% 
+  pivot_wider(id_cols = c(code, species), names_from = brd, values_from = num.nests) %>% 
   mutate(across(contains("brd"), ~replace_na(., 0)),
          total.brd.nests = brd1 + brd2 + brd3 + brd4 + brd5) %>% 
-  group_by(year, species, code) %>% 
+  group_by(species, code) %>% 
   mutate(mean.chx.per.nest = mean(c(rep(1, brd1), rep(2, brd2), rep(3, brd3), rep(4, brd4), rep(5, brd5))),
          sd.chx.per.nest = sd(c(rep(1, brd1), rep(2, brd2), rep(3, brd3), rep(4, brd4), rep(5, brd5)))) %>% 
   ungroup() %>% 
-  mutate(st.err.chx.per.nest = sqrt(sd.chx.per.nest/total.brd.nests))
-
+  mutate(st.err.chx.per.nest = sqrt(sd.chx.per.nest/total.brd.nests),
+         year = zyear) 
+# and generate the summary text
 brood_sizes_text <- zyear_productivity %>% 
   full_join(site_name) %>% 
    mutate(row.num = row_number(),
@@ -595,29 +592,42 @@ brood_sizes_text <- zyear_productivity %>%
                                     paste(" and the average number of ", species, " chicks fledged per nest was ", round(mean.chx.per.nest, 2), " (SE = ", round(st.err.chx.per.nest, 2), ")", sep = "")))  %>% 
   summarise(brood.sizes.text = paste(brood.sizes.text, collapse = " ")) %>% 
   mutate(brood.sizes.text = paste(brood.sizes.text, ".", sep = ""))
-  } else {
-    brood_sizes_text <- data.frame(brood.sizes.text = "")
-  }
-} else {
-  zyear_productivity = historic_nesters_core_spp %>% 
+
+    } else { # if GREG or GBHE were nesting but there is no brood size data:
+      # make empty table to display
+  brood_sizes_wide <- data.frame(species = NA,
+                                 date = NA,
+                                 stage5.nests = NA,
+                                 brd1 = NA,
+                                 brd2 = NA,
+                                 brd3 = NA,
+                                 brd4 = NA,
+                                 brd5 = NA)
+# make empty table for productivity
+    zyear_productivity = historic_nesters_core_spp %>% 
     mutate(year = zyear,
            mean.chx.per.nest = NA,
            sd.chx.per.nest = NA,
            st.err.chx.per.nest = NA)
+    # and generate summary text
   brood_sizes_text = data.frame(brood.sizes.text = paste("Brood size was not observed in any nests at ", site_name$site.name, " in ", zyear, sep = ""))
-}
-} else {
+      }
+
+  } else { # if there were species besides GBHE or GREG nesting:
+    brood_sizes_text = data.frame(brood.sizes.text = paste("There was no nesting activity by Great Blue Heron or Great Egret observed at ", site_name$site.name, " in ", zyear, sep = ""))
+  }
+} else { # if there were no nests observed:
   zyear_productivity = historic_nesters_core_spp %>% 
     mutate(year = zyear,
            mean.chx.per.nest = NA,
            sd.chx.per.nest = NA,
            st.err.chx.per.nest = NA)
-  brood_sizes_text = data.frame(brood.sizes.text = paste("There was no ardeid nesting activity observed at ", site_name$site.name, " in ", zyear, sep = ""))
+  brood_sizes_text = data.frame(brood.sizes.text = paste("There was no nesting activity observed at ", site_name$site.name, " in ", zyear, sep = ""))
   
 }
 ```
 
-We use data on the number of Stage 4 chicks to estimate the average prefledging brood size for the colony, which we use as a measure of how successful the colony is at reproducing. Because Stage 5 chicks may move into neighboring nests, we calculate the number of Stage 4 chicks per nest only on the latest date when there are still no Stage 5 chicks observed in the colony. `r brood_sizes_text$brood.sizes.text`   
+We estimate productivity for Great Blue Heron and Great Egret. We use data on the number of Stage 4 chicks to estimate the average prefledging brood size for the colony, which we use as a measure of how successful the colony is at reproducing. Because Stage 5 chicks may move into neighboring nests, we calculate the number of Stage 4 chicks per nest only on the latest date when there are still no Stage 5 chicks observed in the colony. `r brood_sizes_text$brood.sizes.text`   
 <br>
 
 
@@ -658,11 +668,18 @@ flextable(brood_sizes_wide) %>%
 ```
 
 
-\newpage
-How does this compare to previous years? 
+ 
+```{r results='asis'}
+if(any(spp.nesting %in% c("GREG", "GBHE"))) {
+  print(
+ cat("\n\n\\pagebreak\nHow does this compare to previous years?")
+  )
+}
+```  
+  
 
 ```{r fig.width=8, fig.height=zfig.height.core}
-if(nrow(historic_nesters_core_spp) > 0) {
+if(length(core.spp.nesting) > 0) {
 historic_productivity <- readRDS(here("data/hep_annual_new_productivity")) %>% 
   filter(code == zcode, species %in% historic_nesters_core_spp$species) %>% 
   ungroup() %>% 
@@ -691,8 +708,15 @@ historic_productivity4plot %>%
 
 ```
 
-
-\newpage
+ 
+```{r results='asis'}
+if(any(spp.nesting %in% c("GREG", "GBHE"))) {
+  print(
+ cat("\n\n\\pagebreak\n")
+  )
+}
+```  
+  
 **Disturbance to colony**  
 
 The observers also collected information on disturbance to the colony, including the presence and nesting status of any potential nest predators. This information can help us understand potential causes of nest failure or colony abandonment.

@@ -230,15 +230,29 @@ screened_col_spp <- readRDS(here(paste("data/screened/screened_hep_", zyear, sep
 
 
 
-# split tables with many date columns into multiple tables for better display in Season Summary .doc files
-# for tables with m number of lead columns and n number of columns representing the dates surveys were done on, split the date columns into groups of num_dates_per_split, and create multiple sub-tables as the concatenation of the same lead columns and each successive group of date columns 
 
-date_table_splitter <- function(ztable, num_dates_per_split = 6) {
-num.splits <- ceiling((ncol(ztable) - 3) / num_dates_per_split)
+#' Date table splitter
+#'
+#' Split tables with many date columns into multiple tables for better display in Season Summary .doc files or other output. 
+#'
+#' @param ztable the wide format table to be split (one column per date)
+#' @param num_dates_per_split number of data columns per subtable
+#' @param num.lead.cols number of lead columns
+#'
+#' @return list with each element being one of the split subtables. Currently the list is always 5 elements long. I haven't yet figured out how to make it dynamic to the number of subtables needed.
+#' @export
+#'
+#' @details Table to be split can have a variable number of lead columns and variable number of date columns; both of these values are specified. Function splits the date columns into groups of num_dates_per_split, and create multiple sub-tables as the concatenation of the same lead columns and each successive group of date columns.
+#' 
+#' will probably work fine to split other wide format tables with mutliple columns for repeated data, but has not been tested for this.
+#'
+#' @examples
+date_table_splitter <- function(ztable, num.lead.cols = 3, num_dates_per_split = 6) {
+num.splits <- ceiling((ncol(ztable) - num.lead.cols) / num_dates_per_split)
 seq.splits <- seq(1, num.splits)
-col.splits <- 3 + (num_dates_per_split * seq.splits)
-lead.cols <- c(1:3)
-ztable1_cols <- c(lead.cols, 4:col.splits[1])
+col.splits <- num.lead.cols + (num_dates_per_split * seq.splits)
+lead.cols <- c(1:num.lead.cols)
+ztable1_cols <- c(lead.cols, (num.lead.cols + 1):col.splits[1])
 
 make_date_flextable <- function(date_subtable) {
   out_date_flextable <- date_subtable %>%

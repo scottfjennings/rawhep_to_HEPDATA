@@ -43,7 +43,7 @@ wrangled_s123 <- readRDS(here(paste("data/wrangled/wrangled_s123", zyear, sep = 
 
 # input the colony code and species you want to generate a season summary sheet for
 
-# zcode = 15.0
+# zcode = 146.1
 
 observers <- read.csv(here("data/HEP_tracking_copy/observers.csv")) %>% 
   filter(SITE.CODE == zcode, year == zyear) %>% 
@@ -90,7 +90,7 @@ obs_list <- seas_summary_observers  %>%
   left_join(., observers %>% select(observer.name, Coordinator.)) %>% 
   distinct(observer.name, Coordinator.)
 
-if(out_length > 2) {
+if(nrow(obs_list) > 2) {
 observers_text <- paste(c(obs_list$observer.name[-length(obs_list$observer.name)], 'and', obs_list$observer.name[length(obs_list$observer.name)]), collapse = ", ")
 } else {
 observers_text <- paste(obs_list$observer.name, collapse = " and ")  
@@ -172,7 +172,8 @@ zyear_nesters_text <- paste(zyear_nesters_text, " were observed nesting at ", si
 historic_nesters_text <- historic_nesters %>% 
   mutate(species = translate_bird_names(species, "alpha.code", "common.name"))
 if(nrow(historic_nesters_text) > 2) {
-historic_nesters_text <- paste(c(historic_nesters_text$species[-length(historic_nesters_text$species)], 'and', historic_nesters_text$species[length(historic_nesters_text$species)]), collapse = ", ")
+historic_nesters_text <- paste(c(historic_nesters_text$species[-length(historic_nesters_text$species)], 
+                                 paste('and', historic_nesters_text$species[length(historic_nesters_text$species)], sep = " ")), collapse = ", ")
 } else {
 historic_nesters_text <- paste(historic_nesters_text$species, collapse = " and ") 
 }
@@ -272,7 +273,7 @@ return(ft.out)
 if(nspp > 0){
 if(!is.null(nest_totals$sub_table1)) {
 nest_totals$sub_table1 %>% shared_nest_total_table() %>% 
-    set_caption(caption = "Total number of active nests observed on each visit date:")
+    set_caption(caption = "Total number of active nests observed on each visit date:", style = "Normal")
 }
 }
 ```
@@ -479,7 +480,7 @@ shared_stages_table <- function(ft) {
 ```{r}
 if(any(spp.nesting %in% c("GREG", "GBHE"))) {
 nest_stages$sub_table1 %>% shared_stages_table() %>% 
-    set_caption(caption = "Number of nests at each stage on each visit date (clearly observed nests only):")
+    set_caption(caption = "Number of nests at each stage on each visit date (clearly observed nests only):", style = "Normal")
 }
 ```
 
@@ -696,7 +697,7 @@ flextable(brood_sizes_wide) %>%
   border(border.bottom = fp_border(), part = "header", i = 1, j = 4:ncol(brood_sizes_wide)) %>% 
   border(border.bottom = fp_border(), part = "header", i = 2) %>% 
   border(i = nbrood_rows$nbrood.rows, border.bottom = fp_border(), part = "body") %>% 
-    set_caption(caption = "Number of Stage 4 nests of each brood size (1, 2, 3, 4, or five chicks) observed on each visit date (only dates wtih Stage 4 chicks present are shown):")
+    set_caption(caption = "Number of Stage 4 nests of each brood size (1, 2, 3, 4, or five chicks) observed on each visit date (only dates wtih Stage 4 chicks present are shown):", style = "Normal")
 }
 }
 ```
@@ -777,7 +778,8 @@ if(nrow(disturbance) > 0) {
 flextable(disturbance) %>% 
   autofit() %>% 
   fit_to_width(max_width = 7.5) %>% 
-  width(j = 3, width = 4)
+  width(j = 3, width = 4) %>% 
+    set_caption(caption = "Disturbance events observed or inferred", style = "Normal")
 } else {
   print(paste("There was no disturbance observed at ", site_name$site.name, " in ", zyear, sep = ""))
 }
@@ -796,14 +798,15 @@ predators <- wrangled_s123$predators %>%
 
 ```
 <br> 
-Nest predatory species
+
 ```{r}
 if(nrow(predators) > 0){
 flextable(predators) %>% 
   set_header_labels(predator.species = "Species",
                     present = "Present within 100m",
                     nesting = "Predator observed\nnesting") %>% 
-  autofit()
+  autofit() %>% 
+    set_caption(caption = "Nest predatory species", style = "Normal")
 } else {
   print(paste("There were no predators observed at ", site_name$site.name, " in ", zyear, sep = ""))
 }

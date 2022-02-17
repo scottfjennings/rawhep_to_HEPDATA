@@ -167,11 +167,12 @@ render_season_summary <- function(file = here("code/step2_wrangled_to_season_sum
 # function to output season summary sheet for a given year, colony and species ----
 # files must be .docx. .doc will not work without downloading LibreOffice software
 render_summary_for_observer <- function(file = here("code/summary_for_observer.Rmd"), zyear, zcode, zcol.name) {
+  zcode.sub = gsub("\\.", "_", zcode)
   rmarkdown::render(file, params = list(
     zyear = zyear,
     zcode = zcode
   ), envir = new.env(),
-  output_file = here(paste0("summary_for_observers/", zyear, "/", zcode, "_", zyear, "_", zcol.name, ".pdf", sep = ""))
+  output_file = here(paste0("summary_for_observers/", zyear, "/", zcode.sub, "_", zyear, "_", zcol.name, ".pdf", sep = ""))
   )
 }
 

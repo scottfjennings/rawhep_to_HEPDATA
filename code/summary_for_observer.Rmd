@@ -43,7 +43,7 @@ wrangled_s123 <- readRDS(here(paste("data/wrangled/wrangled_s123", zyear, sep = 
 
 # input the colony code and species you want to generate a season summary sheet for
 
-# zcode = 146.1
+# zcode = 15.0
 
 observers <- read.csv(here("data/HEP_tracking_copy/observers.csv")) %>% 
   filter(SITE.CODE == zcode, year == zyear) %>% 
@@ -240,6 +240,7 @@ One of the main pieces of information observers collect each visit is the total 
 if(nspp > 0) {
 nest_totals <- zyear_nesters %>% 
   select(-code, -complete.count, -peak.active, -obs.initials, -multiple.survey.num) %>% 
+  arrange(species, date) %>% 
   mutate(date = paste(month(date), day(date), sep = "-")) %>% 
   pivot_wider(values_from = total.nests, names_from = date) %>% 
   mutate(species = translate_bird_names(species, "alpha.code", "common.name")) %>% 
@@ -582,14 +583,19 @@ if(any(spp.nesting %in% c("GREG", "GBHE"))) {
 if(nspp > 0) { # if there were >= 1 nest observed:
   if(any(spp.nesting %in% c("GREG", "GBHE"))) { # and if GREG or GBHE were nesting:
  brood_sizes <- wrangled_s123$brood.sizes %>% 
-  filter(code == zcode, species %in% core.spp.nesting, num.nests > 0)
+  filter(code == zcode, species %in% core.spp.nesting) %>% 
+   group_by(species, date) %>% 
+   mutate(tot.nests = sum(num.nests)) %>% 
+   ungroup() %>% 
+   filter(tot.nests > 0)
     if(nrow(brood_sizes) > 0) { # and if there is brood size data:
       # pivot wider for display in summary
 brood_sizes_wide <- brood_sizes %>% 
+  arrange(species, date, brd) %>% 
   mutate(brd = paste("brd.", brd, sep = ""),
          year = zyear,
          stage5.nests = replace_na(stage5.nests, FALSE)) %>% 
-  select(-multiple.survey.num) %>% 
+  #select(-multiple.survey.num) %>% 
   pivot_wider(id_cols = c(species, date, stage5.nests), values_from = num.nests, names_from = brd) %>% 
   mutate(date = ymd(date)) %>% 
   arrange(species, date) %>%  
@@ -690,7 +696,7 @@ flextable(brood_sizes_wide) %>%
   border(border.bottom = fp_border(), part = "header", i = 1, j = 4:ncol(brood_sizes_wide)) %>% 
   border(border.bottom = fp_border(), part = "header", i = 2) %>% 
   border(i = nbrood_rows$nbrood.rows, border.bottom = fp_border(), part = "body") %>% 
-    set_caption(caption = "Number of broods of each size class (1, 2, 3, 4, or five chicks) observed on each visit date (Stage 4 nests only):")
+    set_caption(caption = "Number of Stage 4 nests of each brood size (1, 2, 3, 4, or five chicks) observed on each visit date (only dates wtih Stage 4 chicks present are shown):")
 }
 }
 ```
@@ -767,10 +773,14 @@ disturbance <- wrangled_s123$disturbance %>%
 
 
 ```{r}
+if(nrow(disturbance) > 0) {
 flextable(disturbance) %>% 
   autofit() %>% 
   fit_to_width(max_width = 7.5) %>% 
   width(j = 3, width = 4)
+} else {
+  print(paste("There was no disturbance observed at ", site_name$site.name, " in ", zyear, sep = ""))
+}
 ```
 
 
@@ -788,11 +798,15 @@ predators <- wrangled_s123$predators %>%
 <br> 
 Nest predatory species
 ```{r}
+if(nrow(predators) > 0){
 flextable(predators) %>% 
   set_header_labels(predator.species = "Species",
                     present = "Present within 100m",
                     nesting = "Predator observed\nnesting") %>% 
   autofit()
+} else {
+  print(paste("There were no predators observed at ", site_name$site.name, " in ", zyear, sep = ""))
+}
 
 ```
 

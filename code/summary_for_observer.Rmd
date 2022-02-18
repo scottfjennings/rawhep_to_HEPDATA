@@ -242,6 +242,7 @@ nest_totals <- zyear_nesters %>%
   arrange(species, date) %>% 
   mutate(date = paste(month(date), day(date), sep = "-"),
          date = ifelse(complete.count == "no", paste(date, "*", sep = ""), date)) %>% 
+  select(-code, -peak.active, -complete.count, -obs.initials, -multiple.survey.num) %>% 
   pivot_wider(values_from = total.nests, names_from = date) %>% 
   mutate(species = translate_bird_names(species, "alpha.code", "common.name")) %>% 
   rename(Species = species) %>% 

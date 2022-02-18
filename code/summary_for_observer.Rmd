@@ -41,7 +41,7 @@ wrangled_s123 <- readRDS(here(paste("data/wrangled/wrangled_s123", zyear, sep = 
 
 # input the colony code and species you want to generate a season summary sheet for
 
-# zcode = 57.0
+# zcode = 29.0
 
 observers <- read.csv(here("data/HEP_tracking_copy/observers.csv")) %>% 
   filter(SITE.CODE == zcode, year == zyear) %>% 
@@ -336,7 +336,6 @@ historic_nest_abund4plot <- expand.grid(species = distinct(historic_nest_abund, 
   ungroup() %>% 
   filter(max.abund > 0)
 
-
 historic_nest_abund4plot %>%  
   ggplot() + 
   theme_bw()  +
@@ -348,6 +347,7 @@ historic_nest_abund4plot %>%
        title = "Peak number of active nests (X = no data)",
        fill = "") +
   facet_wrap(~species, ncol = ceiling(distinct(historic_nest_abund4plot, species) %>% nrow()/2), scales = "free")
+
 } else {
   print(paste("There is no data on nesting activity at ", site_name$site.name, " in previous years.", sep = ""))
 }
@@ -737,7 +737,7 @@ historic_productivity4plot %>%
   scale_x_continuous(labels = seq(min(historic_productivity$year), zyear, by = 5), breaks = seq(min(historic_productivity$year), zyear, by = 5)) +
   labs(y = "Average pre-fledging brood size",
        x = "",
-       title = "Productivity (X = no data)") +
+       title = "Mean Stage 4 Brood Size (X = no data)") +
   facet_wrap(~species, ncol = 1, scales = "free_x")
 } else {
   print(paste("There is no data on nesting activity at ", site_name$site.name, " in previous years.", sep = ""))

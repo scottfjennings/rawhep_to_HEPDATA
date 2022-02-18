@@ -238,7 +238,6 @@ One of the main pieces of information observers collect each visit is the total 
 ```{r}
 if(nspp > 0) {
 nest_totals <- zyear_nesters %>% 
-  select(-code, -peak.active, -obs.initials, -multiple.survey.num) %>% 
   arrange(species, date) %>% 
   mutate(date = paste(month(date), day(date), sep = "-"),
          date = ifelse(complete.count == "no", paste(date, "*", sep = ""), date)) %>% 

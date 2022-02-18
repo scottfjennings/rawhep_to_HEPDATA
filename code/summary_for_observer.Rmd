@@ -378,7 +378,10 @@ nest_stages_df <- wrangled_s123$stages %>%
 phen_stages <- wrangled_s123$stages %>% 
   mutate(phen.rop = case_when(species == "GBHE" & which.rop == "rop.4" ~ TRUE,
                               species == "GREG" & which.rop == "rop.5" ~ TRUE)) %>% 
-  filter(code == zcode, species %in% core.spp.nesting, phen.rop == TRUE) 
+  filter(code == zcode, species %in% core.spp.nesting, phen.rop == TRUE) %>% 
+  group_by(species) %>% 
+  filter(date == min(date)) %>% 
+  ungroup()
       if(nrow(phen_stages) > 0) { # if there was stage data during the appropriate ROPs
         # use it to calculate proportion unguarded
 zyear_phenology <- phen_stages %>% 

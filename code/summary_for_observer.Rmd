@@ -199,7 +199,7 @@ if(nspp > 0) {
 
 curr_year_peakactvnsts <- wrangled_s123$nests %>% 
   filter(code == zcode, species %in% spp.nesting, peak.active == TRUE) %>% 
-  select(species, code, date, total.nests) %>% 
+  select(species, code, date, total.nests, complete.count) %>% 
   group_by(species) %>% 
   filter(total.nests == max(total.nests)) %>% 
   ungroup() %>% 
@@ -320,7 +320,7 @@ historic_nest_abund <- readRDS(here("data/hep_annual_nest_abundance")) %>%
 
 if(nrow(historic_nest_abund) > 0) {
 historic_nest_abund <- historic_nest_abund %>% 
-  bind_rows(curr_year_peakactvnsts %>% select(year, species, peakactvnsts)) %>% 
+  bind_rows(curr_year_peakactvnsts %>% select(year, species, peakactvnsts, complete.count)) %>% 
   bind_rows(wrangled_s123$nests %>% 
               filter(code == zcode, (!species %in% spp.nesting & species %in% historic_nesters$species)) %>% 
               distinct(species, total.nests) %>% 
@@ -345,9 +345,10 @@ historic_nest_abund4plot %>%
   geom_text(data = filter(historic_nest_abund4plot, is.na(peakactvnsts)), aes(x = year, y = lab.na, label = "X")) +
   labs(y = "Total number of nests",
        x = "",
-       title = "Peak number of active nests (X = no data)",
+       title = "Peak number of active nests (X = no data; * indicates value from incomplete colony count)",
        fill = "") +
-  facet_wrap(~species, ncol = ceiling(distinct(historic_nest_abund4plot, species) %>% nrow()/2), scales = "free")
+  facet_wrap(~species, ncol = ceiling(distinct(historic_nest_abund4plot, species) %>% nrow()/2), scales = "free") + 
+  geom_text(aes(year, peakactvnsts * 1.1, label = "*"), data = filter(historic_nest_abund4plot, complete.count == "no"))
 
 } else {
   print(paste("There is no data on nesting activity at ", site_name$site.name, " in previous years.", sep = ""))

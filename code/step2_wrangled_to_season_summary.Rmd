@@ -357,7 +357,12 @@ notes <- wrangled_raw$notes %>%
   rbind(., data.frame(code = zcode,
                       date = NA,
                       species = zspp,
-                      note.type = "for.HEPDATA",
+                      note.type = "for.HEPDATA.species",
+                      notes = "")) %>% 
+  rbind(., data.frame(code = zcode,
+                      date = NA,
+                      species = zspp,
+                      note.type = "for.HEPDATA.colony",
                       notes = "")) 
 
 ```

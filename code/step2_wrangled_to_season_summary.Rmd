@@ -318,8 +318,9 @@ note: only dates with at least 1 stage 4 nest are shown
 ```{r}
 # disturbance
 disturbance <- wrangled_raw$disturbance %>% 
-  filter(code == zcode, species == zspp) %>%  
-  select(code, species, date, observed.inferred = obs.inf, description, type, result)
+  filter(code == zcode, species == zspp) %>% 
+  mutate(copy.to.non.nesters = "no") %>%  
+  select(code, species, date, observed.inferred = obs.inf, description, type, result, copy.to.non.nesters)
 
 ```
 <br>

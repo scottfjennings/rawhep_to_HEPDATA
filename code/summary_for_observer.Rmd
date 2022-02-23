@@ -41,7 +41,7 @@ wrangled_s123 <- readRDS(here(paste("data/wrangled/wrangled_s123", zyear, sep = 
 
 # input the colony code and species you want to generate a season summary sheet for
 
-# zcode = 11.2
+# zcode = 3.0
 
 observers <- read.csv(here("data/HEP_tracking_copy/observers.csv")) %>% 
   filter(SITE.CODE == zcode, year == zyear) %>% 
@@ -222,7 +222,8 @@ peakactive_text <- curr_year_peakactvnsts %>%
 } else {
   curr_year_peakactvnsts <- historic_nesters %>% 
     mutate(peakactvnsts = 0,
-           year = zyear)
+           year = zyear,
+           complete.count = "yes")
                                        
   peakactive_text <- data.frame(peakactive.text = paste("There was no ardeid nesting activity observed at ", site_name$site.name, " in ", zyear, ".", sep = "")) 
   
@@ -271,8 +272,13 @@ return(ft.out)
 ```{r}
 if(nspp > 0){
 if(!is.null(nest_totals$sub_table1)) {
+  if(any(zyear_nesters$complete.count == "no")) {
 nest_totals$sub_table1 %>% shared_nest_total_table() %>% 
     set_caption(caption = "Total number of active nests observed on each visit date: (* indicates incomplete colony count)", style = "Normal")
+  } else {
+    nest_totals$sub_table1 %>% shared_nest_total_table() %>% 
+    set_caption(caption = "Total number of active nests observed on each visit date:", style = "Normal")
+  }
 }
 }
 ```
@@ -335,7 +341,11 @@ historic_nest_abund4plot <- expand.grid(species = distinct(historic_nest_abund, 
   mutate(max.abund = max(peakactvnsts, na.rm = TRUE),
          lab.na = max.abund/15) %>% 
   ungroup() %>% 
-  filter(max.abund > 0)
+  filter(max.abund > 0) %>% 
+  mutate(complete.count = ifelse(is.na(complete.count), "yes", complete.count),
+         ztitle = ifelse(complete.count == "no", "Peak number of active nests (X = no data; * indicates value from incomplete colony count)",
+                         "Peak number of active nests (X = no data)"),
+         complete.count = ifelse(complete.count == "no", "*", ""))
 
 historic_nest_abund4plot %>%  
   ggplot() + 
@@ -345,10 +355,10 @@ historic_nest_abund4plot %>%
   geom_text(data = filter(historic_nest_abund4plot, is.na(peakactvnsts)), aes(x = year, y = lab.na, label = "X")) +
   labs(y = "Total number of nests",
        x = "",
-       title = "Peak number of active nests (X = no data; * indicates value from incomplete colony count)",
+       title = historic_nest_abund4plot$ztitle,
        fill = "") +
   facet_wrap(~species, ncol = ceiling(distinct(historic_nest_abund4plot, species) %>% nrow()/2), scales = "free") + 
-  geom_text(aes(year, peakactvnsts * 1.1, label = "*"), data = filter(historic_nest_abund4plot, complete.count == "no"))
+  geom_text(aes(year, peakactvnsts * 1.1, label = complete.count))
 
 } else {
   print(paste("There is no data on nesting activity at ", site_name$site.name, " in previous years.", sep = ""))

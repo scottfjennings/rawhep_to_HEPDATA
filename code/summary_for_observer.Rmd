@@ -730,7 +730,8 @@ historic_productivity4plot <- expand.grid(species = historic_nesters_core_spp$sp
   full_join(historic_productivity) %>% 
   group_by(species) %>% 
   mutate(lab.na = max(mean.chx.per.nest, na.rm = TRUE)/10) %>% 
-  ungroup()
+  ungroup() %>% 
+  mutate(species = translate_bird_names(species, "alpha.code", "common.name"))
 
 
 historic_productivity4plot %>%  

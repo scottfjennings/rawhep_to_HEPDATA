@@ -31,21 +31,17 @@ zyear = 2021
 
 
 
-## Step 1, convert raw HEP data to more-usable format.
-# First Survey123
+# Step 1, Wrangle ---- 
+# convert Survey123, HEP_site_visits and USGS Alcatraz data into the same (more-usable) format
+### First Survey123 ----
 # This step uses functions from step1_wrangle_survey123.R, which can be piped together into a single process.
 
 source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step1_wrangle_survey123.R")
 
 # set downloaded survey123 version
 zversion = 111
-
-
-
  
 # This step fixes field names and date fields, adds a helper column to indicate where multiple surveys happened on the same date, then finally splits the data into different "types" (e.g. total nest numbers, predator observations, etc.). These groups of "like" data are referred to as data groups. Each data group requires different procedures and manipulations downstream in the workflow.
-
-
 
  wrangled_s123 <- read.csv(here(paste("data/downloaded/HEP_2021_", zversion, ".csv", sep = ""))) %>%
   mutate(useforsummary = tolower(useforsummary)) %>% 
@@ -73,15 +69,16 @@ wrangled_s123 %>% saveRDS(paste("data/wrangled/wrangled_s123", zyear, sep = "_")
 
 
 
-# Next, Alcatraz. Wrangling Alcatraz data requires some manual data checks and the process cannot be fully automated into executable functions. 
+### Next, Alcatraz. ----
+# Wrangling Alcatraz data requires some manual data checks and the process cannot be fully automated into executable functions. 
 
 # To wrangle Alcatraz, follow the instructions and run the code in:
 # https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step1_wrangle_alcatraz.R
 
-# And Bolinas.
+### And HEP_site_visits ----
 # TODO create Bolinas code
 
-# Finally combine the wrangled data from each raw data source.
+### Finally combine the wrangled data from each raw data source.----
 
 source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step1_combine_wrangled.R")
 
@@ -93,7 +90,7 @@ combine_wrangled_hep %>% saveRDS(paste("data/wrangled/wrangled_raw", zyear, sep 
 
  
 
-### Step 1.1, Check incoming data
+## Step 1.1, Check incoming data ----
 # Next are some functions and code to check for any data issues and prepare for manual screening. These checks are largely meant to identify "proofing" problems that need to be fixed directly in Survey123.
 
 # Reload wrangled_s123
@@ -154,7 +151,7 @@ check_expected_observers(zyear) %>% # from survey123_utility_functions.R
   view()
 
 
-### Step 1.2. At this point the summaries for observers can be generated
+## Step 1.2. At this point the summaries for observers can be generated ----
 
 # Generate a list of colonies that had a volunteer observer and at least 1 species nesting.
 
@@ -163,10 +160,15 @@ colony_vol_obs <- readRDS(paste("data/wrangled/wrangled_s123", zyear, sep = "_")
   mutate(observers = gsub("\\*", "", observers))
 
 
-out_length <- length(str_split(colony_vol_obs$observers,"\\;")[[1]])
+
+out_lengths <- str_split(colony_vol_obs$observers,"\\;") %>% 
+  map(length) %>% 
+  unlist()
+
+max_out <- out_lengths[out_lengths == max(out_lengths)]
 
 obs_list <- colony_vol_obs  %>%
-  separate(observers, sep = ";", into = paste("obs", seq(1:out_length))) %>% 
+  separate(observers, sep = ";", into = paste("obs", seq(1:max_out))) %>% 
   pivot_longer(cols = contains("obs"), values_to = "observer.name") %>% 
   mutate(across(c(observer.name, colony), ~trimws(.)),
          colony = gsub(" ", "", colony),
@@ -196,7 +198,7 @@ pmap(.l = list(file = here("code/summary_for_observer.Rmd"), zyear = obs_list$ye
 
 
  
-## Step 2, output wrangled Survey123 data into Season Summary sheets. 
+## Step 2, output wrangled Survey123 data into Season Summary sheets. ----
 
 # We want to create a sheet for each instance where a species nested in a colony. 
 
@@ -227,7 +229,7 @@ pmap(.l = list(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear =
 
 
 
-## Step 3, NO CODE - MANUALLY SCREEN SEASON SUMMARY SHEETS.
+## Step 3, NO CODE - MANUALLY SCREEN SEASON SUMMARY SHEETS. ----
 
 # UPdate 2021-12-02: For now we are not renaming files.
 
@@ -237,7 +239,7 @@ pmap(.l = list(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear =
 # This renaming helps prevent accidental overwriting of already screened summary sheets (e.g. when rendering a single sheet), and also helps identify which files in the year-appropriate season_summary_forms folder still need to be screened.
   
    
-## Step 4, extract tables from screened Season Summary Sheets
+## Step 4, extract tables from screened Season Summary Sheets ----
 # This step uses functions in extract_screened_season_summary.R
 
 source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step4_extract_screened_season_summary.r")
@@ -276,7 +278,7 @@ names(screened_s123)
 saveRDS(screened_s123, here(paste("data/screened/screened_s123_", zyear, sep = "")))
 
 
-## Step 5 generate screening change log.
+## Step 5 generate screening change log. ----
 # The logic for this step is based on merging pre-screened and screened data. Where this merge results in 2 records instead of 1, this indicates the record was changed during screening.
 
 # This step uses functions defined in step5_make_screening_change_log.R
@@ -337,7 +339,7 @@ saveRDS(track_changes_s123, here(paste("data/track_changes/track_changes_s123_",
   
   
   
-## Step 6 convert to HEPDATA
+## Step 6 convert to HEPDATA ----
 
 # HEPDATA is a "wide" data structure, and has field names in ALLCAPS. Thus this comprises a bunch of reshaping and renaming. 
 

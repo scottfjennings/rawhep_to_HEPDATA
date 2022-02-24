@@ -208,8 +208,13 @@ hepdata_names <- readRDS("data/HEPDATA_names") %>%
 all_colony_species <- expand.grid(CODE = distinct(screened_hep$observers.effort, code)$code,
                                   SPECIES = c("GBHE", "GREG", "SNEG", "BCNH", "CAEG", "DCCO"))
 
+colony_notes<- HEPDATA_out %>% distinct(CODE, NOTES) %>% 
+  filter(!is.na(NOTES)) %>% 
+  group_by(CODE) %>% 
+  summarise(NOTES = paste(NOTES, collapse = ". "))
+
 no_data_non_nesters <- anti_join(all_colony_species, HEPDATA_out) %>% 
-  left_join(., HEPDATA_out %>% distinct(CODE, NOTES)) %>% 
+  left_join(., colony_notes) %>% 
   mutate(PEAKACTVNSTS = 0,
          Entry_Proofed = "",
          Entered_By = paste("code-generated non-nesting record.", Sys.Date())) 

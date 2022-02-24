@@ -15,7 +15,7 @@ screened_to_HEPDATA <- function(zyear) {
     mutate(code = as.numeric(code))
   
   
-screened_s123 <- readRDS(here(paste("data/screened/screened_hep_", zyear, sep = "")))
+screened_hep <- readRDS(here(paste("data/screened/screened_hep_", zyear, sep = "")))
 
 
 # 1         DATAID
@@ -27,7 +27,7 @@ screened_s123 <- readRDS(here(paste("data/screened/screened_hep_", zyear, sep = 
 #8 and 9 come from effort_summary ----
 # 8   NUMBERVISITS
 # 9     TOTALHOURS
-effort <- screened_s123$observers.effort %>% 
+effort <- screened_hep$observers.effort %>% 
   right_join(screened_sheets) %>% 
   left_join(., readRDS(here("data/HEP_site_names_nums_utm")) %>% 
               select(code, site.name)) %>% 
@@ -36,14 +36,14 @@ effort <- screened_s123$observers.effort %>%
 
 # 10  PEAKACTVNSTS ----
 # this is all the colony X species combos that were really active
-peakactvnsts.gr0 <- screened_s123$nests %>% 
+peakactvnsts.gr0 <- screened_hep$nests %>% 
   right_join(screened_sheets) %>%  
   filter(peak.active == 1) %>% 
   select(CODE = code, SPECIES = species, PEAKACTVNSTS = total.nests) %>% 
   mutate(YEAR = zyear)
 
 # this is all the colony X species combos that were not actively nesting but for which the season summary sheet was screened.
-peakactvnsts.0 <- screened_s123$nests %>% 
+peakactvnsts.0 <- screened_hep$nests %>% 
   right_join(screened_sheets) %>% 
   group_by(code, species) %>% 
   summarise(peakactvnsts = sum(peak.active)) %>% 
@@ -63,7 +63,7 @@ HEPDATA_out <- full_join(effort, peakactvnsts_out)
 
 
 # 16         NOTES ----
-notes <- screened_s123$notes %>%  
+notes <- screened_hep$notes %>%  
   right_join(screened_sheets) %>% 
   filter(note.type == "for.HEPDATA", notes != "", !is.na(notes)) %>% 
   select(CODE = code, SPECIES = species, NOTES = notes) %>% 
@@ -73,7 +73,7 @@ HEPDATA_out <- full_join(HEPDATA_out, notes)
 
 # stage 4 brood sizes ----
 # 17 BRD1; # 18 BRD2; # 19 BRD3; # 20 BRD4; # 21 BRD5; # 22 BRD6
-brood_sizes <- screened_s123$brood.sizes %>%  
+brood_sizes <- screened_hep$brood.sizes %>%  
   right_join(screened_sheets) %>% 
   data.frame() %>% 
   filter(brd.size.date == TRUE) %>% 
@@ -106,7 +106,7 @@ rop_names <- data.frame(which.rop = paste("rop.", seq(1, 7), sep = ""),
                         rop.date.name = c("MARSTGEDATE", "LTMARSTGDATE", "APRSTGEDATE", "MAYSTGEDATE", "JUNSTGEDATE", "LTJUNSTGDATE", "JULSTGEDATE"))
 
 
-all_rop_stages <- screened_s123$stages %>%  
+all_rop_stages <- screened_hep$stages %>%  
   right_join(screened_sheets) %>% 
   filter(grepl("rop", which.rop)) %>% 
   mutate(stage = paste("STAGE", stage, sep = ""),
@@ -149,7 +149,7 @@ HEPDATA_out <- full_join(HEPDATA_out, rop_dates_nests)
 # disturbances ----
 # 65 DIST1DATE; # 66 DIST1TYPE; # 67 DIST1RESULT; # 68 DIST2DATE; # 69 DIST2TYPE; # 70 DIST2RESULT; # 71 DIST3DATE; # 72 DIST3TYPE; # 73 DIST3RESULT; # 74 DIST4DATE; # 75 DIST4TYPE; # 76 DIST4RESULT; # 77 DIST5DATE; # 78 DIST5TYPE; # 79 DIST5RESULT; # 80 DIST6DATE; # 81 DIST6TYPE; # 82 DIST6RESULT; # 83; DIST7DATE; # 84 DIST7TYPE; # 85 DIST7RESULT; # 86 DIST8DATE; # 87 DIST8TYPE; # 88 DIST8RESULT; # 89 DIST9DATE; # 90 DIST9TYPE; # 91 DIST9RESULT
 
-disturbance <- screened_s123$disturbance %>%  
+disturbance <- screened_hep$disturbance %>%  
   right_join(screened_sheets) %>% 
   mutate(result = tolower(result)) %>% 
   filter(!grepl("x", result)) %>% 
@@ -182,7 +182,7 @@ HEPDATA_out <- full_join(HEPDATA_out, disturbance_out)
 # 95   CORANESTING
 # 96   BAEANESTING
 # 97  TUVUROOSTING
-predators <- screened_s123$predators %>%  
+predators <- screened_hep$predators %>%  
   right_join(screened_sheets) %>% 
   filter(nesting == 1, predator.species %in% c("GHOW", "RTHA", "OSPR", "CORA", "BAEA", "TUVU")) %>% 
   mutate(predator = ifelse(predator.species == "TUVU", 
@@ -194,6 +194,7 @@ predators <- screened_s123$predators %>%
   
 
 
+HEPDATA_out <- full_join(HEPDATA_out, predators)
 # 98 Entry_Proofed
 # 99    Entered_By
 
@@ -204,12 +205,25 @@ hepdata_names <- readRDS("data/HEPDATA_names") %>%
               mutate(blah = NA) %>% 
               pivot_wider(values_from = blah, names_from = colname)
 
-HEPDATA_out <- full_join(HEPDATA_out, predators) %>% 
-  mutate(Entry_Proofed = "",
+all_colony_species <- expand.grid(CODE = distinct(screened_hep$observers.effort, code)$code,
+                                  SPECIES = c("GBHE", "GREG", "SNEG", "BCNH", "CAEG", "DCCO"))
+
+no_data_non_nesters <- anti_join(all_colony_species, HEPDATA_out) %>% 
+  left_join(., HEPDATA_out %>% distinct(CODE, NOTES)) %>% 
+  mutate(PEAKACTVNSTS = 0,
+         Entry_Proofed = "",
+         Entered_By = paste("code-generated non-nesting record.", Sys.Date())) 
+
+
+HEPDATA_out <- HEPDATA_out %>% mutate(Entry_Proofed = "",
          Entered_By = paste("code-generated record.", Sys.Date())) %>% 
   full_join(., hepdata_names) %>% 
   filter(!is.na(CODE)) %>% 
+  bind_rows(., no_data_non_nesters) %>% 
   select(names(hepdata_names))
+
+
+# add non-nesting records
 
 return(HEPDATA_out)
 }

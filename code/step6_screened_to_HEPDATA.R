@@ -35,13 +35,14 @@ effort <- screened_s123$observers.effort %>%
   mutate(YEAR = zyear) 
 
 # 10  PEAKACTVNSTS ----
-
+# this is all the colony X species combos that were really active
 peakactvnsts.gr0 <- screened_s123$nests %>% 
   right_join(screened_sheets) %>%  
   filter(peak.active == 1) %>% 
   select(CODE = code, SPECIES = species, PEAKACTVNSTS = total.nests) %>% 
   mutate(YEAR = zyear)
 
+# this is all the colony X species combos that were not actively nesting but for which the season summary sheet was screened.
 peakactvnsts.0 <- screened_s123$nests %>% 
   right_join(screened_sheets) %>% 
   group_by(code, species) %>% 
@@ -111,6 +112,15 @@ all_rop_stages <- screened_s123$stages %>%
   mutate(stage = paste("STAGE", stage, sep = ""),
          YEAR = zyear) %>% 
   left_join(., rop_names)
+
+dup_rop <- all_rop_stages %>% 
+  mutate(rop.stage = paste(rop.name, stage, sep = "")) %>% 
+  count(YEAR, code, species, rop.stage, num.nests) %>% 
+  filter(n > 1) %>% 
+  mutate(out.message = paste(code, species, "\n"))
+if(nrow(num_brood_size_days) > 0) {
+  stop("multiple days selected for the same ROP for: \n", dup_rop$out.message, "\nPlease edit appropriate Season Summary Sheets")
+}
 
 rop_nests <- all_rop_stages %>% 
   mutate(rop.stage = paste(rop.name, stage, sep = "")) %>% 

@@ -12,8 +12,6 @@ library(docxtractr)
 
 
 
-
-
 # screening log ----
 get_screening_log <- function(zyear, zfile) {
   doc <- read_docx(paste("season_summary_forms/", zyear, "/", zfile, sep = ""))

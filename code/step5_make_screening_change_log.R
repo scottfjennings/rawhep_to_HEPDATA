@@ -59,6 +59,12 @@ if(ztable == "nests") {
   mutate_all(~(ifelse(.=="NA", NA, .)))
 }
 
+if(ztable == "brood.sizes") {
+  wrangled_table <- right_join(wrangled_table, distinct(screened_table, code, date))
+}
+
+
+
 table_changelog <- full_join(wrangled_table, screened_table) %>% 
   full_join(screened_sheets) %>% # join with screen_log to have screening notes and confirmation that this colony X species was screened (assuming good record keeping during screening process)
   arrange(code, species, date) %>% 

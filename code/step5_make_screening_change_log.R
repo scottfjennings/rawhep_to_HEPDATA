@@ -60,7 +60,7 @@ if(ztable == "nests") {
 }
 
 if(ztable == "brood.sizes") {
-  wrangled_table <- right_join(wrangled_table, distinct(screened_table, code, date))
+  wrangled_table <- right_join(wrangled_table, distinct(screened_table, code, date, species))
 }
 
 

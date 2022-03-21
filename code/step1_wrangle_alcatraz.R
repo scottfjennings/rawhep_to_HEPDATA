@@ -322,7 +322,7 @@ disturbance <- disturbance %>%
 
 
 # if there are pertinent notes to keep, run this and change keep.note to 1 for that record and fill in note.type and edit the note as appropriate:
-disturbance <- all_notes %>% 
+notes <- all_notes %>% 
   mutate(keep.note = 0,
          note.type = "",
          code = 70,

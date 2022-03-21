@@ -29,18 +29,14 @@ screened_hep <- readRDS(here(paste("data/screened/screened_hep_", zyear, sep = "
 # 9     TOTALHOURS
 effort <- screened_hep$observers.effort %>% 
   right_join(screened_sheets) %>% 
-  left_join(., readRDS(here("data/HEP_site_names_nums_utm")) %>% 
-              select(code, site.name)) %>% 
-  select(SITE = site.name, CODE = code, SPECIES = species, NUMBERVISITS = total.surveys, TOTALHOURS = total.hours) %>% 
-  mutate(YEAR = zyear) 
+  select(CODE = code, SPECIES = species, NUMBERVISITS = total.surveys, TOTALHOURS = total.hours)
 
 # 10  PEAKACTVNSTS ----
 # this is all the colony X species combos that were really active
 peakactvnsts.gr0 <- screened_hep$nests %>% 
   right_join(screened_sheets) %>%  
   filter(peak.active == 1) %>% 
-  select(CODE = code, SPECIES = species, PEAKACTVNSTS = total.nests) %>% 
-  mutate(YEAR = zyear)
+  select(CODE = code, SPECIES = species, PEAKACTVNSTS = total.nests)
 
 # this is all the colony X species combos that were not actively nesting but for which the season summary sheet was screened.
 peakactvnsts.0 <- screened_hep$nests %>% 
@@ -48,8 +44,7 @@ peakactvnsts.0 <- screened_hep$nests %>%
   group_by(code, species) %>% 
   summarise(peakactvnsts = sum(peak.active)) %>% 
   filter(peakactvnsts == 0) %>% 
-  select(CODE = code, SPECIES = species, PEAKACTVNSTS = peakactvnsts) %>% 
-  mutate(YEAR = zyear)
+  select(CODE = code, SPECIES = species, PEAKACTVNSTS = peakactvnsts)
 
 peakactvnsts_out <- rbind(peakactvnsts.gr0, peakactvnsts.0)
 
@@ -66,8 +61,7 @@ HEPDATA_out <- full_join(effort, peakactvnsts_out)
 notes <- screened_hep$notes %>%  
   right_join(screened_sheets) %>% 
   filter(note.type == "for.HEPDATA", notes != "", !is.na(notes)) %>% 
-  select(CODE = code, SPECIES = species, NOTES = notes) %>% 
-  mutate(YEAR = zyear)
+  select(CODE = code, SPECIES = species, NOTES = notes)
 
 HEPDATA_out <- full_join(HEPDATA_out, notes)
 
@@ -94,8 +88,7 @@ if(nrow(num_brood_size_days) > 0) {
 # fix will likely need to be returning to season summary form and editing the brood size table so only 1 date is selected
 
 brood_sizes <- brood_sizes %>% 
-  select(CODE = code, SPECIES = species, contains("BRD")) %>% 
-  mutate(YEAR = zyear)
+  select(CODE = code, SPECIES = species, contains("BRD"))
 
 HEPDATA_out <- full_join(HEPDATA_out, brood_sizes)
 
@@ -109,31 +102,31 @@ rop_names <- data.frame(which.rop = paste("rop.", seq(1, 7), sep = ""),
 all_rop_stages <- screened_hep$stages %>%  
   right_join(screened_sheets) %>% 
   filter(grepl("rop", which.rop)) %>% 
-  mutate(stage = paste("STAGE", stage, sep = ""),
-         YEAR = zyear) %>% 
+  mutate(stage = paste("STAGE", stage, sep = "")) %>% 
   left_join(., rop_names)
 
 dup_rop <- all_rop_stages %>% 
   mutate(rop.stage = paste(rop.name, stage, sep = "")) %>% 
-  count(YEAR, code, species, rop.stage, num.nests) %>% 
+  count(code, species, rop.stage, num.nests) %>% 
   filter(n > 1) %>% 
   mutate(out.message = paste(code, species, "\n"))
-if(nrow(num_brood_size_days) > 0) {
+
+if(nrow(dup_rop) > 0) {
   stop("multiple days selected for the same ROP for: \n", dup_rop$out.message, "\nPlease edit appropriate Season Summary Sheets")
 }
 
 rop_nests <- all_rop_stages %>% 
   mutate(rop.stage = paste(rop.name, stage, sep = "")) %>% 
-  select(YEAR, code, species, rop.stage, num.nests) %>% 
-  pivot_wider(id_cols = c("YEAR", "code", "species"), names_from = rop.stage, values_from = num.nests)
+  select(code, species, rop.stage, num.nests) %>% 
+  pivot_wider(id_cols = c("code", "species"), names_from = rop.stage, values_from = num.nests)
 
 rop_dates <- all_rop_stages %>% 
-  select(YEAR, code, species, date, rop.date.name) %>% 
+  select(code, species, date, rop.date.name) %>% 
   distinct() %>% 
-  pivot_wider(id_cols = c("YEAR", "code", "species"), names_from = rop.date.name, values_from = date)
+  pivot_wider(id_cols = c("code", "species"), names_from = rop.date.name, values_from = date)
   
 rop_dates_nests <- full_join(rop_nests, rop_dates) %>% 
-  select(YEAR, CODE = code, SPECIES = species, 
+  select(CODE = code, SPECIES = species, 
          MARSTGEDATE, MARSTAGE1, MARSTAGE2, MARSTAGE3, MARSTAGE4, MARSTAGE5
          , LTMARSTGDATE, LTMARSTAGE1, LTMARSTAGE2, LTMARSTAGE3, LTMARSTAGE4, LTMARSTAGE5
          , APRSTGEDATE, APRSTAGE1, APRSTAGE2, APRSTAGE3, APRSTAGE4, APRSTAGE5
@@ -169,7 +162,6 @@ disturbance_out <- disturbance_long %>%
   pivot_wider(id_cols = c(code, species), names_from = outname, values_from = value) %>% 
   rename(CODE = code,
          SPECIES = species) %>% 
-  mutate(YEAR = zyear) %>% 
   filter(!is.na(CODE))
 
 
@@ -213,20 +205,42 @@ colony_notes<- HEPDATA_out %>% distinct(CODE, NOTES) %>%
   group_by(CODE) %>% 
   summarise(NOTES = paste(NOTES, collapse = ". "))
 
+colony_obs_effort <- HEPDATA_out %>% 
+  select(CODE, NUMBERVISITS, TOTALHOURS) %>% 
+  distinct()
+
+colony_disturbance <- HEPDATA_out %>% 
+  select(CODE, contains("DIST")) %>% 
+  distinct() %>% 
+  filter_at(vars(contains("DIST")), any_vars(!is.na(.)))
+
+colony_predators <- HEPDATA_out %>% 
+  select(CODE, contains("NESTING")) %>% 
+  distinct() %>% 
+  filter_at(vars(contains("NESTING")), any_vars(!is.na(.)))
+
+colony_info <- full_join(colony_notes, colony_obs_effort) %>% 
+  full_join(., colony_disturbance) %>% 
+  full_join(., colony_predators)
+
 no_data_non_nesters <- anti_join(all_colony_species, HEPDATA_out) %>% 
-  left_join(., colony_notes) %>% 
+  left_join(., colony_info) %>% 
   mutate(PEAKACTVNSTS = 0,
          Entry_Proofed = "",
          Entered_By = paste("code-generated non-nesting record.", Sys.Date())) 
 
 
-HEPDATA_out <- HEPDATA_out %>% mutate(Entry_Proofed = "",
+HEPDATA_out <- HEPDATA_out %>% 
+  mutate(Entry_Proofed = "",
          Entered_By = paste("code-generated record.", Sys.Date())) %>% 
-  full_join(., hepdata_names) %>% 
   filter(!is.na(CODE)) %>% 
   bind_rows(., no_data_non_nesters) %>% 
-  select(names(hepdata_names))
-
+  left_join(., readRDS(here("data/HEP_site_names_nums_utm")) %>% 
+              select(CODE = code, SITE = site.name)) %>% 
+  mutate(YEAR = zyear) %>% 
+  full_join(., hepdata_names) %>% 
+  select(names(hepdata_names)) %>% 
+  filter(!is.na(CODE))
 
 # add non-nesting records
 

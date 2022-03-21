@@ -19,6 +19,12 @@ screened_table <- readRDS(here(paste("data/screened/screened_hep_", zyear, sep =
   mutate(record.in.screened = TRUE) %>% 
   mutate(across(everything(), as.character))
 
+# "NA" is a valid observer initial, and there shouldn't be any NA in obs.initials
+if(ztable == "nests") {
+  screened_table <- screened_table %>% 
+    mutate(obs.initials = ifelse(is.na(obs.initials), "NA", obs.initials))
+}
+
 
 table_changelog <- full_join(wrangled_table, screened_table) %>% 
   full_join(screened_sheets) %>% # join with screen_log to have screening notes and confirmation that this colony X species was screened (assuming good record keeping during screening process)

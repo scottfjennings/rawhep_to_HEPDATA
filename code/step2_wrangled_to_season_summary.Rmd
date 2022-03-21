@@ -336,7 +336,8 @@ flextable(disturbance) %>%
 ```{r}
 # predators
 predators <- wrangled_raw$predators %>% 
-  filter(code == zcode, species == zspp)
+  filter(code == zcode, species == zspp) %>% 
+  mutate(copy.to.non.nesters = "no") 
 
 ```
 <br> 

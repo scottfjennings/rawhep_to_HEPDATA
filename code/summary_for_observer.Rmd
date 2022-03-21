@@ -41,7 +41,7 @@ wrangled_s123 <- readRDS(here(paste("data/wrangled/wrangled_s123", zyear, sep = 
 
 # input the colony code and species you want to generate a season summary sheet for
 
-# zcode = 3.0
+# zcode = 47.1
 
 observers <- read.csv(here("data/HEP_tracking_copy/observers.csv")) %>% 
   filter(SITE.CODE == zcode, year == zyear) %>% 
@@ -65,7 +65,8 @@ include_graphics("ACR-logobug_w_initials.jpg")
 
 # Summary of nest monitoring at the `r site_name$site.name` heronry in `r zyear`  
 
-
+Below is a summary of heron and egret nest monitoring data from `r site_name$site.name` in `r zyear` and how they compare to previous years. These data are preliminary, and should not be considered a final report on activity at this nesting site. Observer review is an important part of our data quality control process--if you see something that is inconsistent with the data you collected, please contact us at cgrc@egret.org. 
+<br>  
 
 
 
@@ -119,10 +120,11 @@ total.surveys <- wrangled_s123$dates %>%
 
 ```
 
+**Observers and effort**  
+
 In `r zyear`, `r observers_text` made `r total.surveys` site visits to the colony for a total of `r seas_summary_observers$total.hours` hours of observation.  
 
-Below is a summary of the data they collected and how they compare to previous years. These data are preliminary, and should not be considered a final report on activity at this nesting site. Observer review is an important part of our data quality control process--if you see something that is inconsistent with the data you collected, please contact us at cgrc@egret.org. 
-<br>  
+
 
 **Species nesting**  
 ```{r}
@@ -268,7 +270,15 @@ return(ft.out)
 }
 ```
 
-
+ 
+```{r, echo=FALSE, results='asis'}
+if(nspp > 0) {
+if(!is.null(nest_totals$sub_table2)) {
+ cat("\n\n\\pagebreak\n")
+}
+}
+```  
+ 
 ```{r}
 if(nspp > 0){
 if(!is.null(nest_totals$sub_table1)) {
@@ -335,30 +345,43 @@ historic_nest_abund <- historic_nest_abund %>%
   mutate(species = translate_bird_names(species, "alpha.code", "common.name"))
 
 historic_nest_abund4plot <- expand.grid(species = distinct(historic_nest_abund, species)$species,
-                  year = seq(min(historic_nest_abund$year), zyear)) %>% 
+                  year = seq(min(historic_nest_abund$year, na.rm = TRUE), zyear)) %>% 
   full_join(historic_nest_abund) %>% 
   group_by(species) %>% 
   mutate(max.abund = max(peakactvnsts, na.rm = TRUE),
          lab.na = max.abund/15) %>% 
   ungroup() %>% 
-  filter(max.abund > 0) %>% 
+  filter(max.abund > 0,
+         !is.na(year)) %>% 
   mutate(complete.count = ifelse(is.na(complete.count), "yes", complete.count),
          ztitle = ifelse(complete.count == "no", "Peak number of active nests (X = no data; * indicates value from incomplete colony count)",
                          "Peak number of active nests (X = no data)"),
-         complete.count = ifelse(complete.count == "no", "*", ""))
+         complete.count = ifelse(complete.count == "no", "*", ""),
+         missing.data = ifelse(is.na(peakactvnsts), "X", ""))
+
+#y_axiser <- function(x) {
+#  if(x > 10) {
+#  x_out <- seq(0, ceiling((x-1)/5) * 5, length.out = 5)
+#  } else {
+#    x_out <- seq(0, x, by = 1)
+#  }
+#  return(x_out)
+#}
+
 
 historic_nest_abund4plot %>%  
   ggplot() + 
   theme_bw()  +
   geom_col(aes(x = year, y = peakactvnsts), color = "black") +
-  scale_x_continuous(labels = seq(min(historic_nest_abund$year), zyear, by = 5), breaks = seq(min(historic_nest_abund$year), zyear, by = 5)) +
-  geom_text(data = filter(historic_nest_abund4plot, is.na(peakactvnsts)), aes(x = year, y = lab.na, label = "X")) +
+  scale_x_continuous(labels = seq(min(historic_nest_abund$year, na.rm = TRUE), zyear, by = 5), breaks = seq(min(historic_nest_abund$year, na.rm = TRUE), zyear, by = 5)) +
+  #geom_text(data = filter(historic_nest_abund4plot, is.na(peakactvnsts)), aes(x = year, y = lab.na, label = "X")) +
   labs(y = "Total number of nests",
        x = "",
        title = historic_nest_abund4plot$ztitle,
        fill = "") +
   facet_wrap(~species, ncol = ceiling(distinct(historic_nest_abund4plot, species) %>% nrow()/2), scales = "free") + 
-  geom_text(aes(year, peakactvnsts * 1.1, label = complete.count))
+  geom_text(aes(year, peakactvnsts * 1.1, label = complete.count)) + 
+  geom_text(aes(year, lab.na, label = missing.data))
 
 } else {
   print(paste("There is no data on nesting activity at ", site_name$site.name, " in previous years.", sep = ""))
@@ -453,7 +476,7 @@ zyear_phenology <- historic_nesters_core_spp %>%
 
 <br>
 
-We estimate the intra-seasonal timing of nesting for Great Blue Heron and Great Egret. The proportion of nests that have reached the unguarded stage (Stages 4 and 5) by the May (Great Blue Heron) or June (Great Egret) Regional Nest Observation Period is a useful metric for us to gauge the intra-seasonal timing of nesting. A larger than average proportion of unguarded nests suggests that the birds began nesting earlier that year than normal. `r phenology_text$phenology.text`   
+Observers also collect data on how many nests are in each stage of the nesting cycle for Great Blue Heron and Great Egret on each visit. We use these data to estimate the intra-seasonal timing of nesting. The proportion of nests that have reached the unguarded stage (Stages 4 and 5) by the May (Great Blue Heron) or June (Great Egret) Regional Nest Observation Period is a useful metric for us to gauge the intra-seasonal timing of nesting. A larger than average proportion of unguarded nests suggests that the birds began nesting earlier that year than normal. `r phenology_text$phenology.text`   
 
 ```{r}
 if(nspp > 0){
@@ -539,7 +562,7 @@ if(any(spp.nesting %in% c("GREG", "GBHE"))) {
 ```{r fig.width=8, fig.height=zfig.height.core}
 if(length(core.spp.nesting) > 0) {
 historic_phenology <- readRDS(here("data/hep_annual_phenology")) %>% 
-  filter(code == zcode, species %in% historic_nesters$species & species %in% c("GBHE", "GREG")) %>% 
+  filter(code == zcode, species %in% historic_nesters$species & species %in% c("GBHE", "GREG"), !is.na(year)) %>% 
   ungroup() 
 
 if(nrow(historic_phenology) > 0) {
@@ -675,7 +698,7 @@ brood_sizes_text <- zyear_productivity %>%
 }
 ```
 
-We estimate productivity for Great Blue Heron and Great Egret. We use data on the number of Stage 4 chicks to estimate the average prefledging brood size for the colony, which we use as a measure of how successful the colony is at reproducing. Because Stage 5 chicks may move into neighboring nests, we calculate the number of Stage 4 chicks per nest only on the latest date when there are still no Stage 5 chicks observed in the colony. `r brood_sizes_text$brood.sizes.text`   
+Observers also collect data on the number of chicks in each Stage 4 nest for Great Blue Heron and Great Egret. We use these data to estimate the average prefledging brood size for the colony, which we use as a measure of how successful the colony is at reproducing. Because Stage 5 chicks may move into neighboring nests, we calculate the number of Stage 4 chicks per nest only on the latest date when there are still no Stage 5 chicks observed in the colony. `r brood_sizes_text$brood.sizes.text`   
 <br>
 
 
@@ -727,7 +750,7 @@ if(any(spp.nesting %in% c("GREG", "GBHE"))) {
 ```{r fig.width=8, fig.height=zfig.height.core}
 if(length(core.spp.nesting) > 0) {
 historic_productivity <- readRDS(here("data/hep_annual_new_productivity")) %>% 
-  filter(code == zcode, species %in% historic_nesters_core_spp$species) %>% 
+  filter(code == zcode, species %in% historic_nesters_core_spp$species, !is.na(year)) %>% 
   ungroup() 
 
 if(nrow(historic_productivity) > 0) {
@@ -772,7 +795,7 @@ if(any(spp.nesting %in% c("GREG", "GBHE"))) {
   
 **Disturbance to colony**  
 
-The observers also collected information on disturbance to the colony, including the presence and nesting status of any potential nest predators. This information can help us understand potential causes of nest failure or colony abandonment.
+The observers also collected information on disturbance to the colony, including the presence and nesting status (avian predators only) of any potential nest predators. This information can help us understand potential causes of nest failure or colony abandonment.
 
 ```{r}
 # disturbance

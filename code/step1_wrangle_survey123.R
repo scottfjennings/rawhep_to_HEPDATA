@@ -2,6 +2,8 @@
 
 
 # requires tidyverse; lubridate
+# requires rawhep_to_HEPDATA_utility_functions.R
+
 
 # 
 # read, create data ----
@@ -59,14 +61,6 @@ s123 <- s123 %>%
          date = as.Date(start, tz = Sys.timezone(location = TRUE)))
 }
 
-# add helper columns to indicate if multiple surveys were done at the same colony on the same day ----
-add_multiple_survey_num <- function(s123) {
-s123 <- s123 %>%
-  group_by(code, date) %>% 
-  mutate(multiple.survey.num = row_number(),
-         num.surveys.this.date = n()) %>% 
-  ungroup()
-}
 
 
 #s123 <- read_s123(zyear, add.test.data = TRUE) %>% filter(useforsummary == "y") %>% fix_s123_names() %>% fix_s123_date_fields() %>% add_multiple_survey_num()

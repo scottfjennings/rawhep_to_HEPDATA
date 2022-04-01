@@ -380,3 +380,22 @@ monthday_completecount <- function(df) {
 }
 
 
+
+# add helper columns to indicate if multiple surveys were done at the same colony on the same day ----
+#' Identify multiple surveys done on the same day
+#' 
+#' Identify and number multiple surveys done at the same colony on the same day
+#'
+#' @param df data frame with at minimum a date field and a code field (HEP colony code)
+#'
+#' @return data frame with the same columns as df, plus multiple.survey.num and num.surveys.this.date
+#' @export
+#'
+#' @examples
+add_multiple_survey_num <- function(df) {
+df <- df %>%
+  group_by(code, date) %>% 
+  mutate(multiple.survey.num = row_number(),
+         num.surveys.this.date = n()) %>% 
+  ungroup()
+}

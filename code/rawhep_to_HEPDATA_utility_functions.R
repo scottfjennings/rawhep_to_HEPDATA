@@ -399,3 +399,68 @@ df <- df %>%
          num.surveys.this.date = n()) %>% 
   ungroup()
 }
+
+
+
+# determine which ROP each survey date belongs to
+#' Assign HEP survey dates to the nearest ROP for that year
+#'
+#' @param df data frame with at least a date, code, multiple.survey.num and complete.count fields
+#' @param rop_dates data frame with ROP dates
+#'
+#' @return
+#' @export
+#'
+#' @examples
+assign_rop <- function(df, rop_dates){
+rop_dates <- rop_dates %>% 
+  filter(year == zyear) %>% 
+  mutate(across(contains("date"), mdy)) %>% 
+  mutate(rop.mid = end.date - 1,
+         rop = paste("rop", rop, sep = ".")) %>% 
+  select(rop, rop.mid) %>% 
+  pivot_wider(names_from = rop, values_from = rop.mid)
+
+which_rop <- df %>% 
+  select(date, code, multiple.survey.num, complete.count) %>% 
+  mutate(rop.1.dif = as.numeric(date - rop_dates$rop.1),
+         rop.2.dif = as.numeric(date - rop_dates$rop.2),
+         rop.3.dif = as.numeric(date - rop_dates$rop.3),
+         rop.4.dif = as.numeric(date - rop_dates$rop.4),
+         rop.5.dif = as.numeric(date - rop_dates$rop.5),
+         rop.6.dif = as.numeric(date - rop_dates$rop.6)) %>% 
+  pivot_longer(cols = contains("rop")) %>% 
+  mutate(abs.diff = abs(value)) %>% 
+  arrange(code, name, date) %>% 
+  group_by(code, name) %>% 
+  filter(abs.diff == min(abs.diff)) %>% 
+  mutate(name = gsub(".dif", "", name)) %>% 
+  rename(which.rop = name,
+         days.diff.rop.mid = value)%>% 
+  group_by(date, multiple.survey.num) %>% 
+  filter(abs.diff == min(abs.diff)) %>% 
+  ungroup()
+
+if(any(count(which_rop, date, code, multiple.survey.num) > 1)) {
+  
+  tie_cols_dates <- count(which_rop, date, code, multiple.survey.num) %>% 
+    ungroup() %>% 
+    filter(n > 1) %>% 
+    mutate(out.col = paste(code, date, sep = ", ")) %>% 
+    select(out.col) %>% 
+    summarise(out.col = paste(out.col, collapse = "; "), .groups = "drop")
+  
+  which_rop <- which_rop %>% 
+    mutate(rop.num = gsub("rop.", "", which.rop)) %>% 
+    group_by(date, code, multiple.survey.num) %>% 
+    filter(rop.num == min(rop.num)) %>% 
+    ungroup() %>% 
+    select(-rop.num)
+  
+  
+  print(paste("Note: ROP ties for the following colonies and dates:", tie_cols_dates$out.col))
+} else {
+  which_rop <- which_rop
+}
+return(which_rop)
+}

@@ -347,7 +347,8 @@ disturbance <- disturbance_long %>%
 
 disturbance_rewide <- disturbance %>% 
   pivot_wider(id_cols = c(code, date, multiple.survey.num, disturbance.num), values_from = value, names_from = disturbance.obs) %>% 
-  mutate(code = as.numeric(code)) %>% 
+  mutate(code = as.numeric(code),
+         date = as.Date(date)) %>% 
   filter(see.signs == "yes") %>% 
   select(-see.signs, -disturbance.num)%>% 
   full_join(., distinct(birds, code, species), by = "code") %>% 

@@ -30,6 +30,15 @@ options(scipen = 999)
 lead.col.width = c(0.5, 0.7, 1)
 date.col.width = 0.6
 
+# to handle USGS collected Alcatraz data
+zcode = ifelse(zcode == 70 & zspp %in% c("BCNH", "SNEG"), 70.888, zcode)
+
+if(zcode == 70.888) {
+  data.note = "Note: For Alcatraz BCNH and SNEG (USGS collected data) colony code changed from 70 to 70.888 for season summary sheets only. Do not edit colony code.\nCheck Alcatraz_usgs_notes.csv (in season summary sheet folder) for possible notes to add to predators, disturbance or notes tables."
+} else {
+  data.note = ""
+}
+
 ```
 
 ```{r}
@@ -62,7 +71,7 @@ wrangled_raw <- readRDS(here(paste("data/wrangled/wrangled_raw", zyear, sep = "_
 
 ```
 
-
+`r data.note`
 
 ```{r}
 # make a blank table to record screener initials
@@ -76,7 +85,7 @@ screeners <- data.frame(year = as.character(zyear),
 
 ```
 \fontsize{12}{22}
-Screener initials:
+
 ```{r ft.align="left"}
 flextable(screeners) %>% 
   width(j = 1:3, width = lead.col.width) %>% 
@@ -89,7 +98,7 @@ flextable(screeners) %>%
 ```{r}
 # make colony/effort summary box
 # Alcatraz spp counted on different days so effort needs to be stored in wrangled at species level. then need to deal with that here
-if(zcode == 70 & zspp %in% c("BCNH", "SNEG")) {
+if(zcode == 70.888 & zspp %in% c("BCNH", "SNEG")) {
  observers.effort <- wrangled_raw$observers.effort %>% 
   filter(code == zcode, 
          species == zspp) %>%  
@@ -194,8 +203,7 @@ Number of nests at each stage
 
 if(zspp %in% c("GREG", "GBHE")) {
 nest_stages_df <- wrangled_raw$stages %>% 
-  filter(code == zcode, species == zspp) %>% 
-  mutate(stage = paste("stage", stage, sep = ".")) %>% 
+  filter(code == zcode, species == zspp) %>%  
   arrange(date) %>%
   date2monthday() %>%  
   mutate(num.nests = as.character(num.nests)) %>% 
@@ -203,6 +211,8 @@ nest_stages_df <- wrangled_raw$stages %>%
   pivot_wider(id_cols = stage, names_from = date, values_from = num.nests) %>% 
   mutate(code = zcode,
          species = zspp) %>% 
+  arrange(as.numeric(as.character(stage))) %>%
+  mutate(stage = paste("stage", stage, sep = ".")) %>% 
   rename(variable = stage)
 
 
@@ -331,7 +341,8 @@ flextable(disturbance) %>%
   width(5, width = 3) %>% 
   fit_to_width(max_width = 8.5)
 ```
-
+Disturbance types: A = Avian, H = Human, W = Weather, M = Mammal, O = ACR field observer, P = Unknown Predator, U = unknown  
+Disturbance results: 0 = none, 1 = behavioral response, 2 = nest failure, 3 = abandonment of colony, 4 = pre‐season disturbance
 
 ```{r}
 # predators

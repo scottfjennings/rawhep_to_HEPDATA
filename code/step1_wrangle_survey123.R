@@ -18,7 +18,25 @@ add_2020_test_data <- function(s123) {
 # if test data are not added to s_123 in the above read function, then test site data are ignored at left_join where observers_effort created below
 
 
-# deal with the funky Survey123 field names ----
+#' Fix Survey123 field names
+#'
+#' Field names in Survey123 are attrocious. The first step is to make them more usable.
+#'
+#' @param s123 data frame of imported .csv which has been downloaded from Survey 123.
+#'
+#' @return data frame with same number of rows but fewer columns as s123
+#' @export
+#'
+#' @examples # generally called in a pipeline with other functions defined here:
+#'  wrangled_s123 <- read.csv(here(paste("data/downloaded/HEP_", zyear, "_", zversion, ".csv", sep = ""))) %>%
+#'  #   mutate(complete.count = NA) %>% # only do this if wrangling 2020 data!!!
+#'  mutate(useforsummary = tolower(useforsummary)) %>%
+#'  filter(useforsummary == "y") %>% #
+#'  fix_s123_names() %>%
+#'  fix_s123_date_fields() %>%
+#'  add_multiple_survey_num() %>%
+#'  wrangle_s123()
+#'  
 fix_s123_names <- function(s123) {
 colnames(s123) <- gsub("Please.describe.why.you.were.unable.to.complete.colony.count..and.list.which.species.weren.t.adequately.counted.", "incomplete.count.notes", colnames(s123))
 
@@ -50,8 +68,23 @@ return(s123)
 
 #s123 <- fix_s123_names(s123)
 
-# convert date fields ----
-# fix time zone to pacific
+#' Fix time zone to pacific
+#'
+#' @param s123 data frame with start, end and date fields, generally the output of fix_s123_names()  
+#' @param zformat time format of the start, end and date fields. If left blank, default is "%m/%d/%Y %I:%M:%S %p"
+#'
+#' @return
+#' @export
+#'
+#' @examples # generally called in a pipeline with other functions defined here:
+#'  wrangled_s123 <- read.csv(here(paste("data/downloaded/HEP_", zyear, "_", zversion, ".csv", sep = ""))) %>%
+#'  #   mutate(complete.count = NA) %>% # only do this if wrangling 2020 data!!!
+#'  mutate(useforsummary = tolower(useforsummary)) %>%
+#'  filter(useforsummary == "y") %>% #
+#'  fix_s123_names() %>%
+#'  fix_s123_date_fields() %>%
+#'  add_multiple_survey_num() %>%
+#'  wrangle_s123()
 fix_s123_date_fields <- function(s123, zformat = "%m/%d/%Y %I:%M:%S %p") {
 s123 <- s123 %>% 
   mutate(start = as.POSIXct(start, format = zformat, tz = "GMT"),
@@ -63,22 +96,24 @@ s123 <- s123 %>%
 
 
 
-#s123 <- read_s123(zyear, add.test.data = TRUE) %>% filter(useforsummary == "y") %>% fix_s123_names() %>% fix_s123_date_fields() %>% add_multiple_survey_num()
-
-# proofed data ----
-#s123_proofed <- read.csv(paste("HEP_data/", s123_file_proofed, ".csv", sep = ""))
 
 
-#check_cols <- full_join(names(s123_proofed) %>% 
-#  data.frame() %>% 
-#  rename(varb = 1) %>% 
-#  mutate(s123.proofed = 1),
-#names(s123) %>% 
-#  data.frame() %>% 
-#  rename(varb = 1) %>% 
-#  mutate(s123 = 1))
-
-# wrangle survey123 ----
+#' Wrangle survey123 to more usable structure 
+#'
+#' @param s123 data frame with cleaned field names, generally output of fix_s123_names() %>% fix_s123_date_fields() %>% add_multiple_survey_num()
+#'
+#' @return a list with 8 elements to match the other wrangled_ objects: dates, observers.effort, nests, stages, brood.sizes, predators, disturbance, notes
+#' @export
+#'
+#' @examples # generally called in a pipeline with other functions defined here:
+#'  wrangled_s123 <- read.csv(here(paste("data/downloaded/HEP_", zyear, "_", zversion, ".csv", sep = ""))) %>%
+#'  #   mutate(complete.count = NA) %>% # only do this if wrangling 2020 data!!!
+#'  mutate(useforsummary = tolower(useforsummary)) %>%
+#'  filter(useforsummary == "y") %>% #
+#'  fix_s123_names() %>%
+#'  fix_s123_date_fields() %>%
+#'  add_multiple_survey_num() %>%
+#'  wrangle_s123()
 wrangle_s123 <- function(s123) {
 
 # observers, effort ----

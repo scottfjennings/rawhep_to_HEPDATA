@@ -4,51 +4,96 @@
 
 #' Combine wrangled HEP data objects.
 #'
-#' @param zyear 
+#' @param wrangled_s123 wrangled 
+#' @param wrangled_alcatraz 
+#' @param wrangled_site_visit 
 #'
 #' @return Object with the same structure as each individual wrangled_ object
 #' @export
 #'
 #' @examples
-#' combine_wrangled_hep %>% saveRDS(here("data/wrangled/wrangled_raw_2021"))
-combine_wrangled_hep <- function(zyear, wrangled_s123, wrangled_alcatraz = NA, wrangled_site_visit = NA) {
+#' combine_wrangled_hep()
+combine_wrangled_hep <- function(wrangled_s123, wrangled_alcatraz = NA, wrangled_site_visits = NA) {
 
 
-dates = rbind(wrangled_s123$dates %>%
-                mutate(species = NA),
-              wrangled_alcatraz$dates)
+dates = wrangled_s123$dates
 
-observers.effort = rbind(wrangled_s123$observers.effort %>%
-                           mutate(species = NA),
-                         wrangled_alcatraz$observers.effort)
+observers.effort = wrangled_s123$observers.effort
 
-nests = rbind(wrangled_s123$nests,
-              wrangled_alcatraz$nests)
+nests = wrangled_s123$nests
 
-stages = rbind(wrangled_s123$stages,
-               wrangled_alcatraz$stages)
+stages = wrangled_s123$stages
 
-brood.sizes = rbind(wrangled_s123$brood.sizes,
-                    wrangled_alcatraz$brood.sizes)
+brood.sizes = wrangled_s123$brood.sizes
 
-predators = rbind(wrangled_s123$predators,
-                  wrangled_alcatraz$predators)
+predators = wrangled_s123$predators
 
-disturbance = rbind(wrangled_s123$disturbance,
-                    wrangled_alcatraz$disturbance)
+disturbance = wrangled_s123$disturbance
 
-notes = rbind(wrangled_s123$notes,
-              wrangled_alcatraz$notes)
+notes = wrangled_s123$notes
                      
                      
-wrangled_raw <- list(dates,
-                     observers.effort,
-                     nests,
-                     stages,
-                     brood.sizes,
-                     predators,
-                     disturbance,
-                     notes)
+if(!is.na(wrangled_alcatraz)) {
+dates = bind_rows(dates,
+                  wrangled_alcatraz$dates)
+
+observers.effort = bind_rows(observers.effort,
+                             wrangled_alcatraz$observers.effort)
+
+nests = bind_rows(nests %>% filter(!(code == 70 & (species %in% c("BCNH", "SNEG")))),
+                  wrangled_alcatraz$nests)
+
+stages = bind_rows(stages,
+                   wrangled_alcatraz$stages)
+              
+brood.sizes = bind_rows(brood.sizes,
+                        wrangled_alcatraz$brood.sizes)
+
+predators = bind_rows(predators %>% filter(!(code == 70 & (species %in% c("BCNH", "SNEG")))),
+                      wrangled_alcatraz$predators)
+
+disturbance = bind_rows(disturbance %>% filter(!(code == 70 & (species %in% c("BCNH", "SNEG")))),
+                        wrangled_alcatraz$disturbance)
+
+notes = bind_rows(notes %>% filter(!(code == 70 & (species %in% c("BCNH", "SNEG")))),
+                  wrangled_alcatraz$notes)
+}
+
+if(!is.na(wrangled_site_visits)) {
+dates = bind_rows(dates,
+                  wrangled_site_visits$dates)
+
+observers.effort = bind_rows(observers.effort,
+                             wrangled_site_visits$observers.effort)
+
+nests = bind_rows(nests,
+                  wrangled_site_visits$nests)
+
+stages = bind_rows(stages,
+                   wrangled_site_visits$stages)
+              
+brood.sizes = bind_rows(brood.sizes,
+                        wrangled_site_visits$brood.sizes)
+
+predators = bind_rows(predators,
+                      wrangled_site_visits$predators)
+
+disturbance = bind_rows(disturbance,
+                        wrangled_site_visits$disturbance)
+
+notes = bind_rows(notes,
+                  wrangled_site_visits$notes)
+}
+              
+
+wrangled_raw <- list(dates = dates,
+                     observers.effort = observers.effort,
+                     nests = nests,
+                     stages = stages,
+                     brood.sizes = brood.sizes,
+                     predators = predators,
+                     disturbance = disturbance,
+                     notes = notes)
 
 return(wrangled_raw)
 

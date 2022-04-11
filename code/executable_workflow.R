@@ -24,6 +24,9 @@ library(tidyverse)
 library(lubridate)
 library(here)
 library(birdnames)
+library(xlsx)
+
+
 
 source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/rawhep_to_HEPDATA_utility_functions.R")
 
@@ -37,13 +40,15 @@ zyear = 2021
 # This step uses functions from step1_wrangle_survey123.R, which can be piped together into a single process.
 
 source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step1_wrangle_survey123.R")
+# source(here("code/step1_wrangle_survey123.R"))
 
 # set downloaded survey123 version
-zversion = 111
+zversion = "0"
  
 # This step fixes field names and date fields, adds a helper column to indicate where multiple surveys happened on the same date, then finally splits the data into different "types" (e.g. total nest numbers, predator observations, etc.). These groups of "like" data are referred to as data groups. Each data group requires different procedures and manipulations downstream in the workflow.
 
- wrangled_s123 <- read.csv(here(paste("data/downloaded/HEP_2021_", zversion, ".csv", sep = ""))) %>%
+ wrangled_s123 <- read.csv(here(paste("data/downloaded/HEP_", zyear, "_", zversion, ".csv", sep = ""))) %>%
+#   mutate(complete.count = NA) %>% # only do this if wrangling 2020 data!!!
   mutate(useforsummary = tolower(useforsummary)) %>% 
   filter(useforsummary == "y") %>% # 
   fix_s123_names() %>% 
@@ -70,23 +75,95 @@ wrangled_s123 %>% saveRDS(paste("data/wrangled/wrangled_s123", zyear, sep = "_")
 
 
 ### Next, Alcatraz. ----
-# Wrangling Alcatraz data requires some manual data checks and the process cannot be fully automated into executable functions. 
+# Wrangling Alcatraz data requires some manual data checks and the process cannot be fully automated into a single pipeline of executable functions. 
+# Alcatraz step 1. read source, data 
+source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step1_wrangle_alcatraz.R")
+# source(here("code/step1_wrangle_alcatraz.R"))
 
-# To wrangle Alcatraz, follow the instructions and run the code in:
-# https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step1_wrangle_alcatraz.R
+all_checks_usgs <- read.xlsx(here("data/alcatraz/70_Alcatraz_2021databackupSNG,BCNH.xlsx"), sheetIndex = "Visits", startRow = 3)
+
+# Alcatraz step 2. basic initial cleaning and reshaping 
+long_alcatraz <- pivot_alcatraz(all_checks_usgs)
+
+# Alcatraz step 3. some basic data checking to make sure pivot worked and check for any problems 
+summary(long_alcatraz)
+
+# any unexpected species?
+count(long_alcatraz, species)
+
+# notes?
+distinct(long_alcatraz, notes) %>% view()
+
+
+# fix any problems 
+# Remove from 2021 a "passerine" nest that was monitored for fun.
+long_alcatraz <- long_alcatraz %>% 
+  filter(species != "PASS")
+
+# Alcatraz step 4. extract info from notes 
+all_checks_extracted <- notes_extracter(long_alcatraz)
+
+# and save notes to be reviewed during screening
+export_alcatraz_notes(all_checks_extracted)
+
+## Alcatraz step 5. IMPORTANT MANUAL STEP HERE: examine the notes_extracter output to make sure no valuable/valid records have been classified with keeper == "N". 
+
+#Probably just need to look at records that have notes
+all_checks_extracted %>% 
+    filter(keeper == "N", !is.na(notes)) %>% 
+  view()
+
+
+# can do a manual edit if there is still good data in alc_keeperN_with_notes, changing keeper to Y and changing egg, chick, etc as appropriate
+all_checks_extracted <- edit(all_checks_extracted)
+
+  # a helper to check what the most common notes are and compare to the notes that are specified in notes_extracter() to make sure we're dealing with the important ones
+check_notes_frequency(all_checks_extracted)
+
+
+# and now filter to have just the keepers
+# and remove renests
+# !! each year double check this is how renests were indicated  all_checks_extracted <- all_checks_extracted %>% 
+    filter(keeper == "Y") %>% 
+    select(-keeper) %>%
+    filter(!grepl("A", nest), !grepl("B", nest))
+
+
+# Alcatrax step 6. assign nest stage 
+alcatraz_checks_stages <- alcatraz_assign_stage(all_checks_extracted)
+ 
+  
+# Alcatraz step 7. and the final reshape to wrangled format 
+wrangled_alcatraz <- wrangle_alcatraz(alcatraz_checks_stages)
+
+wrangled_alcatraz %>% 
+  saveRDS(here("data/wrangled/wrangled_alcatraz_2021"))
+
 
 ### And HEP_site_visits ----
-# TODO create Bolinas code
+# 
+source(here("code/step1_wrangle_HEP_site_visits.R"))
+
+hep_site_visits <- hep_site_visits_from_access("C:/Users/scott.jennings/Documents/Projects/core_monitoring_research/HEP/HEP_screening_focal/HEP_site_visit_data.accdb")
+
+col_codes = c(53)
+
+wrangled_site_visits <- wrangle_HEP_site_visits(hep_site_visits, col_codes = col_codes)
+
+saveRDS(wrangled_site_visits, paste("data/wrangled/wrangled_site_visits", zyear, sep = "_"))
 
 ### Finally combine the wrangled data from each raw data source.----
 
 source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step1_combine_wrangled.R")
+source(here("code/step1_combine_wrangled.R"))
 
-
+combine_wrangled_hep = combine_wrangled_hep(wrangled_s123 = readRDS(here(paste("data/wrangled/wrangled_s123", zyear, sep = "_"))),
+                                            wrangled_alcatraz = readRDS(here(paste("data/wrangled/wrangled_alcatraz", zyear, sep = "_"))),
+                                            wrangled_site_visits = readRDS(here(paste("data/wrangled/wrangled_site_visits", zyear, sep = "_"))))
 
 combine_wrangled_hep %>% saveRDS(paste("data/wrangled/wrangled_raw", zyear, sep = "_"))
 
-
+# combine_wrangled_hep <- readRDS(paste("data/wrangled/wrangled_raw", zyear, sep = "_"))
 
  
 
@@ -97,6 +174,7 @@ combine_wrangled_hep %>% saveRDS(paste("data/wrangled/wrangled_raw", zyear, sep 
 
 wrangled_s123 <- readRDS(paste("data/wrangled/wrangled_s123", zyear, sep = "_"))
 
+wrangled_raw <- readRDS(paste("data/wrangled/wrangled_raw", zyear, sep = "_"))
 
 
 # Check year matches zyear  
@@ -154,12 +232,10 @@ check_expected_observers(zyear) %>% # from survey123_utility_functions.R
 ## Step 1.2. At this point the summaries for observers can be generated ----
 
 # Generate a list of colonies that had a volunteer observer and at least 1 species nesting.
-
+# need to resplit the list of observers
 colony_vol_obs <- readRDS(paste("data/wrangled/wrangled_s123", zyear, sep = "_"))$observers.effort %>% 
   select(code, colony, observers) %>% 
   mutate(observers = gsub("\\*", "", observers))
-
-
 
 out_lengths <- str_split(colony_vol_obs$observers,"\\;") %>% 
   map(length) %>% 
@@ -167,6 +243,7 @@ out_lengths <- str_split(colony_vol_obs$observers,"\\;") %>%
 
 max_out <- out_lengths[out_lengths == max(out_lengths)]
 
+# then finally the list of colonies that had at least 1 volunteer observer
 obs_list <- colony_vol_obs  %>%
   separate(observers, sep = ";", into = paste("obs", seq(1:max_out))) %>% 
   pivot_longer(cols = contains("obs"), values_to = "observer.name") %>% 
@@ -177,20 +254,16 @@ obs_list <- colony_vol_obs  %>%
          colony = gsub(",", "", colony),
          colony = gsub("\\.", "", colony)) %>% 
   select(-name) %>% 
-  filter(!is.na(observer.name), !observer.name %in% c("David Lumpkin", "Emiko Condeso", "Barbara Wechsberg", "Nils Warnock", "Scott Jennings")) %>% 
+  filter(!is.na(observer.name), !observer.name %in% c("David Lumpkin", "Emiko Condeso", "Barbara Wechsberg", "Nils Warnock", "Scott Jennings", "Jim Jensen")) %>% 
   distinct(code, colony) %>% 
   mutate(year = zyear) 
 
 
 
 
-# The colony_spp_need_sheet object has the colony and species fields for purrr::map to iterate over to create each sheet.
+pmap(.l = list(file = here("code/summary_for_observer.Rmd"), zyear = 2021, zcode = 83.0, zcol.name = "BlakesLandingSouth"), .f = render_summary_for_observer)
 
-
-
-pmap(.l = list(file = here("code/summary_for_observer.Rmd"), zyear = 2021, zcode = 11.2, zcol.name = "CloverdaleRiverRoad"), .f = render_summary_for_observer)
-
-pmap(.l = list(file = here("code/summary_for_observer.Rmd"), zyear = obs_list$year[22], zcode = obs_list$code[22], zcol.name = obs_list$colony[22]), .f = render_summary_for_observer)
+pmap(.l = list(file = here("code/summary_for_observer.Rmd"), zyear = obs_list$year[16], zcode = obs_list$code[16], zcol.name = obs_list$colony[16]), .f = render_summary_for_observer)
 
 pmap(.l = list(file = here("code/summary_for_observer.Rmd"), zyear = obs_list$year[9:51], zcode = obs_list$code[9:51], zcol.name = obs_list$colony[9:51]), .f = render_summary_for_observer)
 
@@ -205,26 +278,30 @@ pmap(.l = list(file = here("code/summary_for_observer.Rmd"), zyear = obs_list$ye
 # The function get_colony_spp_need_sheet() queries wrangled_s123 to get a list of all species in each colony this year, and queries the year-appropriate season_summary_forms folder to create a list of colony X species that still need a Season Summary Sheet created. Rendering Season Summary Sheets to .docx files is the most time-consuming process of this workflow, so it is beneficial to only render each sheet once.
 
 
-colony_spp_need_sheet <- get_colony_spp_need_sheet(zyear)
+colony_spp_need_sheet <- get_colony_spp_need_sheet(zyear, include.inactive = FALSE) 
 
-
+  # also add colony X species combos that were active within the last 3 years
+  recent_nesters <- readRDS(here("data/hep_annual_nest_abundance")) %>%
+              filter(year > zyear - 3, peakactvnsts > 0) %>% 
+              distinct(code, species) %>% 
+    right_join(., distinct(colony_spp_need_sheet, code))
+  
+colony_spp_need_sheet <- full_join(colony_spp_need_sheet, recent_nesters) %>% 
+  filter(!is.na(species)) %>% 
+  mutate(year = zyear)
 
 # The colony_spp_need_sheet object has the colony and species fields for purrr::map to iterate over to create each sheet.
+safely(pmap(.l = list(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = colony_spp_need_sheet$year, zcode = colony_spp_need_sheet$code, zspp = colony_spp_need_sheet$species), .f = render_season_summary))
 
-
-pmap(.l = list(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = colony_spp_need_sheet$year, zcode = colony_spp_need_sheet$code, zspp = colony_spp_need_sheet$species), .f = render_season_summary)
-
+# The colony_spp_need_sheet object has the colony and species fields for purrr::map to iterate over to create each sheet.
+pmap(.l = list(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = colony_spp_need_sheet$year[105:108], zcode = colony_spp_need_sheet$code[105:108], zspp = colony_spp_need_sheet$species[105:108]), .f = render_season_summary)
 
 # Note: you can generate a Season Summary Sheet for a single species X colony instance by specifying species and colony in the call to render_season_summary:
-
-
 render_season_summary(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = 2021, zcode = 70, zspp = "BCNH")
 
 
 # Or all species for a single colony:
-
-
-pmap(.l = list(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = 2021, zcode = 16, zspp = c("GBHE", "GREG", "SNEG", "BCNH", "CAEG", "DCCO")), .f = render_season_summary)
+pmap(.l = list(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = 2021, zcode = 53, zspp = c("GBHE", "GREG", "SNEG", "BCNH", "CAEG", "DCCO")), .f = render_season_summary)
 
 
 
@@ -242,23 +319,22 @@ pmap(.l = list(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear =
 ## Step 4, extract tables from screened Season Summary Sheets ----
 # This step uses functions in extract_screened_season_summary.R
 
-source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step4_extract_screened_season_summary.r")
+source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step4_extract_screened_season_summary.R")
 
   
 # Create a list of Season Summary Sheets that have been screened (requires file renaming in step 3).
 
   screened_seas_summ_files <- list.files(paste("season_summary_forms/", zyear, "/", sep = ""))
-
+# if you have one of the season summary sheets in this directory open, you will not get the right file name for that sheet and creating screened_hep below will fail
 
 
 # There are separate functions in step4_extract_screened_season_summary.r for each data group. These functions loop through each .docx file and extract the pertinent table, then assemble those into a single data frame. Bundling those data frames into a list brings the data back to the same structure and names as wrangled_s123, so that a log of screening changes can be easily made (step 5)
 
-  # Note, running the code below will overwrite any previous version of screened_s123, it will not append new records to the previous version. This generally shouldn't be a problem (I can't think of a realistic scenario), but it is something to be aware of.  
 
   # Also note that messages about "the condition having length > 1" are OK and can be ignored
 
 
-screened_s123 <- list(screen.log = map2_df(zyear, screened_seas_summ_files, get_screening_log),
+screened_hep <- list(screen.log = map2_df(zyear, screened_seas_summ_files, get_screening_log),
                       observers.effort = map2_df(zyear, screened_seas_summ_files, get_observers_effort),
                       nests = map2_df(zyear, screened_seas_summ_files, get_total_nest_table),
                       stages = map2_df(zyear, screened_seas_summ_files, get_nest_stage_rop_table),
@@ -268,14 +344,17 @@ screened_s123 <- list(screen.log = map2_df(zyear, screened_seas_summ_files, get_
                       notes = map2_df(zyear, screened_seas_summ_files, get_notes) %>% distinct())  
 
 
-# Check the result. You will see that screened_s123 does not contain a dates table, but it does contain a screening.log table. The latter is the top table on the Season Summary Sheet.
+# Check the result. You will see that screened_hep does not contain a dates table, but it does contain a screening.log table. The latter is the top table on the Season Summary Sheet.
 
-names(screened_s123)
+names(screened_hep)
 
 
-# Save screened_s123 to disk
+# Save screened_hep to disk
+  # Note, running the code below will overwrite any previous version of screened_s123, it will not append new records to the previous version. This generally shouldn't be a problem (I can't think of a realistic scenario), but it is something to be aware of.  
 
-saveRDS(screened_s123, here(paste("data/screened/screened_s123_", zyear, sep = "")))
+saveRDS(screened_hep, here(paste("data/screened/screened_hep_", zyear, sep = "")))
+
+# screened_hep <- readRDS(here(paste("data/screened/screened_hep_", zyear, sep = "")))
 
 
 ## Step 5 generate screening change log. ----
@@ -288,7 +367,7 @@ source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/ma
 
 # As with step 4, a function is called for each data group, and the results are combined into a list. Here the function is a simple join that could be generalized for all data groups, so the same function is called for all data groups. 
 
-track_changes_s123 <- list(screen.log = readRDS(here(paste("data/screened/screened_s123_", zyear, sep = "")))[["screen.log"]],
+track_changes_hep <- list(screen.log = readRDS(here(paste("data/screened/screened_hep_", zyear, sep = "")))[["screen.log"]],
                            observers.effort = make_track_change_tables(zyear, "observers.effort"),
                            nests = make_track_change_date_tables(zyear, "nests") %>% 
                              mutate(date = as.Date(date)) %>% 
@@ -305,16 +384,24 @@ track_changes_s123 <- list(screen.log = readRDS(here(paste("data/screened/screen
                              mutate(date = as.Date(date)) %>% 
                              arrange(code, species, date),
                            notes = make_track_change_date_tables(zyear, "notes") %>% 
-                             mutate(date = as.Date(date)) %>% 
+                             mutate(date = ifelse(date == "", NA, date),
+                                    date = as.Date(date)) %>% 
                              arrange(code, species, date)
 )
 
 
 # You can see that we have now added some additional fields to each data group table to indicate whether records are in wrangled_s123, screened_s123, or both, and whether a Season Summary Sheet was made. Screened and changelog are helper columns, filled based the values of record.in.wrangled, summary.sheet.made and record.in.screened, which can help you quickly identify the status of each record.
 
-names(track_changes_s123)
-str(track_changes_s123$nests)
+names(track_changes_hep)
+str(track_changes_hep$nests)
 
+
+# check screen_log against list of active nesters to make sure at least all active nesting data got screened
+# hopefully this filter returns 0 rows
+track_changes_hep$nests %>% 
+  filter(total.nests > 0, screened == FALSE) %>% 
+  view()
+  
 
 
 # You can filter based on changelog to see the records that differed between wrangled_s123 and screened_s123. The main fields we expect to change in screening are:
@@ -325,16 +412,22 @@ str(track_changes_s123$nests)
  
 # The numeric nest count fields should not change, so be sure to scan those to make sure they didn't change accidentally 
 
-
-
-track_changes_s123$nests %>% 
+track_changes_hep$nests %>% 
   filter(grepl("changed", changelog)) %>% view()
 
+track_changes_hep$stages %>% 
+  filter(grepl("changed", changelog)) %>% 
+  arrange(code, species, date, stage) %>% 
+  view()
 
+track_changes_hep$brood.sizes %>% 
+  filter(grepl("changed", changelog)) %>% 
+  arrange(code, species, date, brd) %>% 
+  view()
 
 # Save to disk
 
-saveRDS(track_changes_s123, here(paste("data/track_changes/track_changes_s123_", zyear, sep = ""))) 
+saveRDS(track_changes_hep, here(paste("data/track_changes/track_changes_hep_", zyear, sep = ""))) 
 
   
   
@@ -348,7 +441,15 @@ source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/ma
 
 HEPDATA <- screened_to_HEPDATA(zyear)
 
+count(HEPDATA, CODE) %>% view()
+
 str(HEPDATA)
+
+# 2020 only
+HEPDATA <- HEPDATA %>% 
+  mutate(PEAKACTVNSTS = ifelse((CODE == 70.0 & SPECIES %in% c("BCNH", "SNEG")), NA, PEAKACTVNSTS),
+         NOTES = ifelse((CODE == 70.0 & SPECIES %in% c("BCNH", "SNEG")), "No BCNH or SNEG survey by USGS due to COVID", NOTES))
+
 
 
 # Finally, save HEPDATA for appending to the HEPDATA access database.
@@ -357,5 +458,6 @@ saveRDS(HEPDATA, here(paste("data/as_HEPDATA/HEPDATA_", zyear, sep = "")))
 
 write.csv(HEPDATA, here(paste("data/as_HEPDATA/HEPDATA_", zyear, ".csv", sep = "")), row.names = FALSE)
 
+# HEPDATA2020 <- readRDS(here(paste("data/as_HEPDATA/HEPDATA_", zyear, sep = "")))
 
 

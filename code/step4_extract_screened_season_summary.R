@@ -77,7 +77,9 @@ total_nests <- map(total_nest_tables, get_date_tables)  %>%
   pivot_wider(values_from = value, names_from = variable)  %>% 
   mutate(code = as.numeric(code),
          total.nests = as.numeric(total.nests),
-         peak.active = as.numeric(peak.active)) %>% 
+         peak.active = as.numeric(peak.active),
+         complete.count = ifelse(str_sub(date, -1) == ".", "no", "yes"),
+         obs.initials = ifelse(obs.initials == "", NA, obs.initials)) %>% 
   monthday_to_date() %>% 
   select(code, date, multiple.survey.num, everything())
 

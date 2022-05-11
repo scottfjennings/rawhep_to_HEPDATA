@@ -140,16 +140,19 @@ if(grepl("GREG|GBHE", zfile)){
   stage4brd <- stage4brd %>% 
     rename_all(~sub("brd.date", "brd.size.date", .x))
 
+nbrood.cols = ncol(stage4brd) - 5
+  
   # if species == GBHE or GREG but no stage 4 info, return null
   if(nrow(stage4brd) == 1 & (stage4brd$brd.size.date == "NA" | stage4brd$brd.size.date == "")) {
     stage4brd = NULL
   } else { # else pivot the stage info back to long format
   stage4brd <- stage4brd %>% 
-    pivot_longer(cols = c(paste("brd", seq(1, 5), sep = ".")), names_to = "brd", values_to = "num.nests") %>%
+    pivot_longer(cols = c(paste("brd", seq(1, nbrood.cols), sep = ".")), names_to = "brd", values_to = "num.nests") %>%
     mutate(brd = gsub("brd.", "", brd)) %>% 
     mutate(date = gsub("\\.", "_", date)) %>% 
     separate(date, into = c("date", "multiple.survey.num"), sep = "_") %>% 
-    mutate(multiple.survey.num = ifelse(multiple.survey.num == "" | is.na(multiple.survey.num), 1, multiple.survey.num)) %>% 
+    mutate(multiple.survey.num = ifelse(multiple.survey.num == "" | is.na(multiple.survey.num), 1, multiple.survey.num),
+           multiple.survey.num = as.numeric(multiple.survey.num)) %>% 
     select(code, date, multiple.survey.num, species, num.nests, brd, brd.size.date, stage5.nests) %>% 
     mutate(across(.cols = c(code, num.nests), as.numeric))
   }
@@ -181,7 +184,8 @@ get_predators <- function(zyear, zfile) {
   predators <- predators %>% 
     mutate(code = as.numeric(code),
            present = ifelse(present == "NA", NA, present),
-           nesting = ifelse(nesting == "NA", NA, nesting))
+           nesting = ifelse(nesting == "NA", NA, nesting),
+           across(c(present, nesting), ~as.character(.)))
 }
 
 # all_predators <- map2_df(zyear, seas_summ_files, get_predators) %>% distinct() # should be duplicated for each species, distinct will remove dups

@@ -154,7 +154,9 @@ nbrood.cols = ncol(stage4brd) - 5
     mutate(date = gsub("\\.", "_", date)) %>% 
     separate(date, into = c("date", "multiple.survey.num"), sep = "_") %>% 
     mutate(multiple.survey.num = ifelse(multiple.survey.num == "" | is.na(multiple.survey.num), 1, multiple.survey.num),
-           multiple.survey.num = as.numeric(multiple.survey.num)) %>% 
+           multiple.survey.num = as.numeric(multiple.survey.num),
+           brd.size.date = ifelse(brd.size.date == "", NA, brd.size.date),
+           stage5.nests = ifelse(stage5.nests == "", NA, stage5.nests)) %>% 
     select(code, date, multiple.survey.num, species, num.nests, brd, brd.size.date, stage5.nests) %>% 
     mutate(across(.cols = c(code, num.nests), as.numeric))
   }

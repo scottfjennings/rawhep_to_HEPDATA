@@ -229,3 +229,52 @@ get_notes <- function(zyear, zfile) {
 
 # saveRDS(screened_s123, paste("data/screened/screened_s123_", zyear, sep = ""))
  
+
+
+#' Title
+#'
+#' @param zyear 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+check_multiple_brood_dates <- function(zyear) {
+  
+num_brood_size_days <- screened_hep$brood.sizes %>%  
+  data.frame() %>% 
+  filter(brd.size.date == TRUE) %>% 
+  mutate(brd = paste("BRD", brd, sep = "")) %>% 
+  pivot_wider(id_cols = c(code, species, date), values_from = num.nests, names_from = brd) %>% 
+  count(code, species, date) %>% 
+  mutate(out.message = paste(code, species, "\n")) %>% 
+  filter(n > 1) %>% 
+  distinct()
+
+if(nrow(num_brood_size_days) > 0) {
+  stop("multiple days selected for brood size for: \n", num_brood_size_days$out.message, "\nPlease edit appropriate Season Summary Sheets")
+} 
+}
+
+
+#' Title
+#'
+#' @param zyear 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+check_multiple_rop_dates <- function(zyear) {
+dup_rop <- screened_hep$stages %>%  
+  filter(grepl("rop", which.rop)) %>% 
+  distinct(code, species, date, which.rop) %>% 
+  count(code, species, which.rop) %>% 
+  filter(n > 1) %>% 
+  mutate(out.message = paste(code, species))
+
+if(nrow(dup_rop) > 0) {
+  stop("multiple days selected for the same ROP for: \n", dup_rop$out.message, "\nPlease edit appropriate Season Summary Sheets")
+} 
+}
+

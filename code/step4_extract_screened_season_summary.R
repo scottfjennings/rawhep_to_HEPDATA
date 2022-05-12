@@ -188,7 +188,9 @@ get_predators <- function(zyear, zfile) {
   predators <- predators %>% 
     mutate(code = as.numeric(code),
            present = ifelse(present == "NA", NA, present),
+           present = ifelse(present == "", NA, present),
            nesting = ifelse(nesting == "NA", NA, nesting),
+           nesting = ifelse(nesting == "", NA, nesting),
            across(c(present, nesting), ~as.character(.)))
 }
 

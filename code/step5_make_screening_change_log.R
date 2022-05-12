@@ -21,6 +21,12 @@ wrangled_table <- readRDS(here(paste("data/wrangled/wrangled_raw_", zyear, sep =
   mutate(record.in.wrangled = TRUE) %>% 
   mutate(across(everything(), as.character))
 
+if(ztable == "observers.effort") {
+  wrangled_table <- wrangled_table %>% 
+    select(-species)
+}
+
+
 # get screened table 
 screened_table <- readRDS(here(paste("data/screened/screened_hep_", zyear, sep = "")))[[ztable]] %>% 
   data.frame() %>%

@@ -32,10 +32,11 @@ pivot_alcatraz <- function(usgs_checks) {
 names(usgs_checks) <- tolower(names(usgs_checks))
 
 usgs_checks <- usgs_checks %>% 
-  rename(species = spp)
+  rename(nest = no.,
+         species = spp)
 # remove un-needed columns and make field types friendly  
-just_checks <- all_checks_usgs %>% 
-  select(nest = no., species, contains(c("date", "egg", "chick", "age", "notes"))) %>%
+just_checks <- usgs_checks %>% 
+  select(nest, species, contains(c("date", "egg", "chick", "age", "notes"))) %>%
   mutate_all(as.character) %>% 
   filter(!is.na(nest)) 
 
@@ -276,20 +277,22 @@ nests <- checks_stages %>%
 # no brood sizes for BCNH, SNEG
 
 #
-predators <- data.frame(date = as.Date(NA),
+predators <- expand.grid(code = 70.888,
+                         species = distinct(checks_stages, species)$species) %>% 
+  mutate(date = as.Date(NA),
                         predator.species = "",
                         present = as.double(""),
                         nesting = as.double(""),
-                        code = 70.888,
                         multiple.survey.num = 1)
 
 #
-disturbance <- data.frame(date = as.Date(NA),
+disturbance <-  expand.grid(code = 70.888,
+                         species = distinct(checks_stages, species)$species) %>% 
+  mutate(date = as.Date(NA),
                           obs.inf = "",
                           type = "",
                           result = "",
                           description = "",
-                          code = 70.888,
                           multiple.survey.num = "1")
 
 #

@@ -121,7 +121,7 @@ return(nesting_history)
 #}
 
 # make list of colony X species combos that still need a Season Summary Sheet made ----
-get_colony_spp_need_sheet <- function(zyear, include.inactive = TRUE) {
+get_colony_spp_need_sheet <- function(zyear, include.inactive = TRUE, include.already.made = FALSE) {
 colony_spp <- readRDS(paste("data/wrangled/wrangled_s123", zyear, sep = "_"))$nests 
 
 if(include.inactive == FALSE) {
@@ -134,7 +134,7 @@ if(include.inactive == FALSE) {
   arrange(code, species)
 
 # remove colony X species that already have sheet made
-if(length(list.files(paste("season_summary_forms/", zyear, "/", sep = ""))) > 0) {
+if(include.already.made == FALSE & length(list.files(paste("season_summary_forms/", zyear, "/", sep = ""))) > 0) {
 colony_spp_need_sheet <- colony_spp %>% 
   anti_join(., list.files(paste("season_summary_forms/", zyear, "/", sep = "")) %>% 
               data.frame() %>% 

@@ -58,10 +58,21 @@ HEPDATA_out <- full_join(effort, peakactvnsts_out)
 
 
 # 16         NOTES ----
-notes <- screened_hep$notes %>%  
+spp_notes <- screened_hep$notes %>%  
   right_join(screened_sheets) %>% 
-  filter(note.type == "for.HEPDATA", notes != "", !is.na(notes)) %>% 
-  select(CODE = code, SPECIES = species, NOTES = notes)
+  filter(note.type == "for.HEPDATA.species", notes != "", !is.na(notes)) %>% 
+  select(CODE = code, SPECIES = species, NOTES.spp = notes) %>% 
+  distinct()
+
+col_notes <- screened_hep$notes %>%  
+  right_join(screened_sheets) %>% 
+  filter(note.type == "for.HEPDATA.colony", notes != "", !is.na(notes)) %>% 
+  select(CODE = code, SPECIES = species, NOTES.col = notes) %>% 
+  distinct()
+
+notes = full_join(spp_notes, col_notes) %>% 
+  mutate(NOTES = ifelse(NOTES.spp == NOTES.col | grepl(NOTES.col, NOTES.spp), NOTES.spp, paste(NOTES.spp, NOTES.col))) %>% 
+  select(CODE, SPECIES, NOTES)
 
 HEPDATA_out <- full_join(HEPDATA_out, notes)
 
@@ -174,12 +185,18 @@ HEPDATA_out <- full_join(HEPDATA_out, disturbance_out)
 # 95   CORANESTING
 # 96   BAEANESTING
 # 97  TUVUROOSTING
-predators <- screened_hep$predators %>%  
+nesting_predators <- screened_hep$predators %>%  
   right_join(screened_sheets) %>% 
-  filter(nesting == 1, predator.species %in% c("GHOW", "RTHA", "OSPR", "CORA", "BAEA", "TUVU")) %>% 
+  filter((nesting == 1 | tolower(copy.to.non.nesters) == "yes"), predator.species %in% c("GHOW", "RTHA", "OSPR", "CORA", "BAEA", "TUVU")) %>% 
   mutate(predator = ifelse(predator.species == "TUVU", 
                            paste(toupper(predator.species), "ROOSTING", sep = ""),
                            paste(toupper(predator.species), "NESTING", sep = ""))) %>% 
+  distinct(code, predator, nesting)
+  
+
+predators <- nesting_predators %>% 
+  full_join(expand.grid(code = distinct(nesting_predators, code)$code,
+                        species = c("BCNH", "CAEG", "GREG", "SNEG", "GBHE", "DCCO"))) %>% 
   pivot_wider(id_cols = c(code, species), names_from = predator, values_from = nesting) %>% 
   rename(CODE = code,
          SPECIES = species) 
@@ -190,6 +207,8 @@ HEPDATA_out <- full_join(HEPDATA_out, predators)
 # 98 Entry_Proofed
 # 99    Entered_By
 
+HEPDATA_out <- HEPDATA_out %>% 
+  mutate(CODE = ifelse(CODE == 70.888, 70.0, CODE))
 
 hepdata_names <- readRDS("data/HEPDATA_names") %>% 
               data.frame() %>% 
@@ -197,7 +216,7 @@ hepdata_names <- readRDS("data/HEPDATA_names") %>%
               mutate(blah = NA) %>% 
               pivot_wider(values_from = blah, names_from = colname)
 
-all_colony_species <- expand.grid(CODE = distinct(screened_hep$observers.effort, code)$code,
+all_colony_species <- expand.grid(CODE = distinct(HEPDATA_out, CODE)$CODE,
                                   SPECIES = c("GBHE", "GREG", "SNEG", "BCNH", "CAEG", "DCCO"))
 
 colony_notes<- HEPDATA_out %>% distinct(CODE, NOTES) %>% 

@@ -193,6 +193,7 @@ get_predators <- function(zyear, zfile) {
            nesting = ifelse(nesting == "NA", NA, nesting),
            nesting = ifelse(nesting == "", NA, nesting),
            across(c(predator.species, present, nesting), ~as.character(.)))
+  
 }
 
 # all_predators <- map2_df(zyear, seas_summ_files, get_predators) %>% distinct() # should be duplicated for each species, distinct will remove dups

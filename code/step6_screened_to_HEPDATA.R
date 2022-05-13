@@ -70,8 +70,9 @@ col_notes <- screened_hep$notes %>%
   select(CODE = code, SPECIES = species, NOTES.col = notes) %>% 
   distinct()
 
+# If colony notes are the same as species notes, or colony notes are contained in species notes, then just use species notes, otherwise, paste the 2 together
 notes = full_join(spp_notes, col_notes) %>% 
-  mutate(NOTES = ifelse(NOTES.spp == NOTES.col | grepl(NOTES.col, NOTES.spp), NOTES.spp, paste(NOTES.spp, NOTES.col))) %>% 
+  mutate(NOTES = ifelse(NOTES.spp == NOTES.col | str_detect(NOTES.spp, NOTES.col), NOTES.spp, paste(NOTES.spp, NOTES.col))) %>% 
   select(CODE, SPECIES, NOTES)
 
 HEPDATA_out <- full_join(HEPDATA_out, notes)
@@ -156,7 +157,7 @@ HEPDATA_out <- full_join(HEPDATA_out, rop_dates_nests)
 disturbance <- screened_hep$disturbance %>%  
   right_join(screened_sheets) %>% 
   mutate(result = tolower(result)) %>% 
-  filter(!grepl("x", result)) %>% 
+  filter(!grepl("x", type), !grepl("x", result)) %>% 
   group_by(code, species) %>% 
   arrange(code, species, date) %>% 
   mutate(dist.num = row_number()) %>% 
@@ -185,6 +186,12 @@ HEPDATA_out <- full_join(HEPDATA_out, disturbance_out)
 # 95   CORANESTING
 # 96   BAEANESTING
 # 97  TUVUROOSTING
+
+# makes most sense to fix code for USGS Alcatraz data here
+HEPDATA_out <- HEPDATA_out %>% 
+  mutate(CODE = ifelse(CODE == 70.888, 70.0, CODE))
+
+
 nesting_predators <- screened_hep$predators %>%  
   right_join(screened_sheets) %>% 
   filter((nesting == 1 | tolower(copy.to.non.nesters) == "yes"), predator.species %in% c("GHOW", "RTHA", "OSPR", "CORA", "BAEA", "TUVU")) %>% 
@@ -194,9 +201,9 @@ nesting_predators <- screened_hep$predators %>%
   distinct(code, predator, nesting)
   
 
-predators <- nesting_predators %>% 
-  full_join(expand.grid(code = distinct(nesting_predators, code)$code,
-                        species = c("BCNH", "CAEG", "GREG", "SNEG", "GBHE", "DCCO"))) %>% 
+predators <- expand.grid(code = distinct(nesting_predators, code)$code,
+                        species = c("BCNH", "CAEG", "GREG", "SNEG", "GBHE", "DCCO")) %>%
+  full_join(., nesting_predators) %>% 
   pivot_wider(id_cols = c(code, species), names_from = predator, values_from = nesting) %>% 
   rename(CODE = code,
          SPECIES = species) 
@@ -206,9 +213,6 @@ predators <- nesting_predators %>%
 HEPDATA_out <- full_join(HEPDATA_out, predators)
 # 98 Entry_Proofed
 # 99    Entered_By
-
-HEPDATA_out <- HEPDATA_out %>% 
-  mutate(CODE = ifelse(CODE == 70.888, 70.0, CODE))
 
 hepdata_names <- readRDS("data/HEPDATA_names") %>% 
               data.frame() %>% 

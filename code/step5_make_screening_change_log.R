@@ -26,14 +26,16 @@ if(ztable == "observers.effort") {
     select(-species)
 }
 
-
+if(ztable == "predators") {
+  wrangled_table <- wrangled_table %>% 
+    select(-date, -multiple.survey.num)
+}
 # get screened table 
 screened_table <- readRDS(here(paste("data/screened/screened_hep_", zyear, sep = "")))[[ztable]] %>% 
   data.frame() %>%
   ungroup() %>% 
   mutate(record.in.screened = TRUE) %>% 
   mutate(across(everything(), as.character))
-
 
 
 table_changelog <- full_join(wrangled_table, screened_table) %>% 
@@ -73,6 +75,10 @@ screened_table <- readRDS(here(paste("data/screened/screened_hep_", zyear, sep =
   mutate(record.in.screened = TRUE) %>% 
   mutate(across(everything(), as.character)) 
 
+if(ztable == "disturbance") {
+  screened_table <- screened_table %>% 
+    rename("obs.inf" = observed.inferred)
+}
 
 # "NA" is a valid observer initial, and there shouldn't be any NA in obs.initials
 if(ztable == "nests") {

@@ -104,7 +104,7 @@ long_alcatraz <- long_alcatraz %>%
 all_checks_extracted <- notes_extracter(long_alcatraz)
 
 # and save notes to be reviewed during screening
-export_alcatraz_notes(all_checks_extracted)
+export_alcatraz_notes(all_checks_extracted, zyear)
 
 ## Alcatraz step 5. IMPORTANT MANUAL STEP HERE: examine the notes_extracter output to make sure no valuable/valid records have been classified with keeper == "N". 
 
@@ -123,10 +123,7 @@ check_notes_frequency(all_checks_extracted)
 
 # and now filter to have just the keepers
 # and remove renests
-# !! each year double check this is how renests were indicated  all_checks_extracted <- all_checks_extracted %>% 
-    filter(keeper == "Y") %>% 
-    select(-keeper) %>%
-    filter(!grepl("A", nest), !grepl("B", nest))
+# !! each year double check this is how renests were indicated  all_checks_extracted <- all_checks_extracted %>% filter(keeper == "Y") %>% select(-keeper) %>% filter(!grepl("A", nest), !grepl("B", nest))
 
 
 # Alcatrax step 6. assign nest stage 
@@ -278,7 +275,7 @@ pmap(.l = list(file = here("code/summary_for_observer.Rmd"), zyear = obs_list$ye
 # The function get_colony_spp_need_sheet() queries wrangled_s123 to get a list of all species in each colony this year, and queries the year-appropriate season_summary_forms folder to create a list of colony X species that still need a Season Summary Sheet created. Rendering Season Summary Sheets to .docx files is the most time-consuming process of this workflow, so it is beneficial to only render each sheet once.
 
 
-colony_spp_need_sheet <- get_colony_spp_need_sheet(zyear, include.inactive = FALSE) 
+colony_spp_need_sheet <- get_colony_spp_need_sheet(zyear, include.inactive = FALSE, include.already.made = FALSE) 
 
   # also add colony X species combos that were active within the last 3 years
   recent_nesters <- readRDS(here("data/hep_annual_nest_abundance")) %>%
@@ -317,6 +314,24 @@ pmap(.l = list(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear =
   
    
 ## Step 4, extract tables from screened Season Summary Sheets ----
+
+# first compare which sheets are in S drive vs local vs which data are in S123 to make sure all sheets have been created and screened
+full_join(list.files("C:/Users/scott.jennings/Documents/Projects/core_monitoring_research/HEP/rawhep_to_HEPDATA/season_summary_forms/2021") %>%
+                     data.frame() %>%
+                     rename(file = 1) %>%
+                     mutate(c.forms = TRUE),
+                   list.files("S:/Databases/HEP_raw_data/process_rawhep_to_HEPDATA/season_summary_forms/2021") %>% 
+                     data.frame() %>%
+                     rename(file = 1) %>%
+                     mutate(s.forms = TRUE)) %>% 
+  filter(!grepl("notes", file)) %>% 
+  mutate(file = gsub(".docx", "", file)) %>% 
+  separate(file, into = c("code", "year", "species", "screened"), sep = "_", remove = FALSE) %>% 
+  mutate(across(c(code, year), ~as.numeric(.))) %>% 
+  full_join(get_colony_spp_need_sheet(zyear, include.inactive = FALSE, include.already.made = TRUE) %>% 
+              mutate(s123 = TRUE)) %>% 
+  view()
+
 # This step uses functions in extract_screened_season_summary.R
 
 source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step4_extract_screened_season_summary.R")
@@ -324,7 +339,7 @@ source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/ma
   
 # Create a list of Season Summary Sheets that have been screened (requires file renaming in step 3).
 
-  screened_seas_summ_files <- list.files(paste("season_summary_forms/", zyear, "/", sep = ""))
+  screened_seas_summ_files <- list.files(paste("season_summary_forms/", zyear, "/", sep = ""), pattern = "doc")
 # if you have one of the season summary sheets in this directory open, you will not get the right file name for that sheet and creating screened_hep below will fail
 
 
@@ -348,6 +363,11 @@ screened_hep <- list(screen.log = map2_df(zyear, screened_seas_summ_files, get_s
 
 names(screened_hep)
 
+# and some tests for multiple days 
+# there will be a warning message if there are multiple days for the brood size or any ROP dates
+check_multiple_brood_dates(zyear)
+check_multiple_rop_dates(zyear)
+
 
 # Save screened_hep to disk
   # Note, running the code below will overwrite any previous version of screened_s123, it will not append new records to the previous version. This generally shouldn't be a problem (I can't think of a realistic scenario), but it is something to be aware of.  
@@ -357,13 +377,15 @@ saveRDS(screened_hep, here(paste("data/screened/screened_hep_", zyear, sep = "")
 # screened_hep <- readRDS(here(paste("data/screened/screened_hep_", zyear, sep = "")))
 
 
+
+
 ## Step 5 generate screening change log. ----
 # The logic for this step is based on merging pre-screened and screened data. Where this merge results in 2 records instead of 1, this indicates the record was changed during screening.
 
 # This step uses functions defined in step5_make_screening_change_log.R
 
 source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step5_make_screening_change_log.R")
-
+# source(here("code/step5_make_screening_change_log.R"))
 
 # As with step 4, a function is called for each data group, and the results are combined into a list. Here the function is a simple join that could be generalized for all data groups, so the same function is called for all data groups. 
 
@@ -413,19 +435,47 @@ track_changes_hep$nests %>%
 # The numeric nest count fields should not change, so be sure to scan those to make sure they didn't change accidentally 
 
 track_changes_hep$nests %>% 
-  filter(grepl("changed", changelog)) %>% view()
+  filter(grepl("changed", changelog)) %>% 
+  left_join(track_changes_hep$screen.log %>% mutate(code = as.numeric(code))) %>% 
+  view()
 
 track_changes_hep$stages %>% 
   filter(grepl("changed", changelog)) %>% 
   arrange(code, species, date, stage) %>% 
+  left_join(track_changes_hep$screen.log %>% mutate(code = as.numeric(code))) %>%
   view()
 
 track_changes_hep$brood.sizes %>% 
   filter(grepl("changed", changelog)) %>% 
   arrange(code, species, date, brd) %>% 
+  left_join(track_changes_hep$screen.log %>% mutate(code = as.numeric(code))) %>%
   view()
 
 # Save to disk
+# only need to save record of changes, don't need to save unchanged rows here
+
+track_changes_hep$screen.log <- track_changes_hep$screen.log
+
+track_changes_hep$observers.effort <- track_changes_hep$observers.effort %>% 
+  filter(grepl("changed", changelog))
+  
+track_changes_hep$nests <- track_changes_hep$nests %>% 
+  filter(grepl("changed", changelog))
+
+track_changes_hep$stages <- track_changes_hep$stages %>% 
+  filter(grepl("changed", changelog))
+
+track_changes_hep$brood.sizes <- track_changes_hep$brood.sizes %>% 
+  filter(grepl("changed", changelog))
+
+track_changes_hep$predators <- track_changes_hep$predators %>% 
+  filter(grepl("changed", changelog))
+
+track_changes_hep$disturbance <- track_changes_hep$disturbance %>% 
+  filter(grepl("changed", changelog))             
+
+track_changes_hep$notes <- track_changes_hep$notes %>% 
+  filter(grepl("changed", changelog), grepl("HEPDATA", note.type))
 
 saveRDS(track_changes_hep, here(paste("data/track_changes/track_changes_hep_", zyear, sep = ""))) 
 
@@ -438,9 +488,12 @@ saveRDS(track_changes_hep, here(paste("data/track_changes/track_changes_hep_", z
 
 
 source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step6_screened_to_HEPDATA.R")
+# source(here("code/step6_screened_to_HEPDATA.R"))
 
-HEPDATA <- screened_to_HEPDATA(zyear)
+HEPDATA <- screened_to_HEPDATA(zyear) %>% 
+  arrange(CODE, SPECIES)
 
+# there should be 6 records for each colony
 count(HEPDATA, CODE) %>% view()
 
 str(HEPDATA)

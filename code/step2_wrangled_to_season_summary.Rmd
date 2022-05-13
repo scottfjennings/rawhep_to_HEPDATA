@@ -31,13 +31,13 @@ lead.col.width = c(0.5, 0.7, 1)
 date.col.width = 0.6
 
 # to handle USGS collected Alcatraz data
-zcode = ifelse(zcode == 70 & zspp %in% c("BCNH", "SNEG"), 70.888, zcode)
+#zcode = ifelse(zcode == 70 & zspp %in% c("BCNH", "SNEG"), 70.888, zcode)
 
-if(zcode == 70.888) {
-  data.note = "Note: For Alcatraz BCNH and SNEG (USGS collected data) colony code changed from 70 to 70.888 for season summary sheets only. Do not edit colony code.\nCheck Alcatraz_usgs_notes.csv (in season summary sheet folder) for possible notes to add to predators, disturbance or notes tables."
-} else {
+#if(zcode == 70.888) {
+#  data.note = "Note: For Alcatraz BCNH and SNEG (USGS collected data) colony code changed from 70 to 70.888 for season summary sheets only. Do not edit colony code.\nCheck #Alcatraz_usgs_notes.csv (in season summary sheet folder) for possible notes to add to predators, disturbance or notes tables."
+#} else {
   data.note = ""
-}
+#}
 
 ```
 

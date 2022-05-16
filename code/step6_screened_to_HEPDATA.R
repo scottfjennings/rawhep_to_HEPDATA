@@ -273,10 +273,10 @@ HEPDATA_out <- HEPDATA_out %>%
   mutate(Entry_Proofed = "",
          Entered_By = paste("code-generated record.", Sys.Date())) %>% 
   filter(!is.na(CODE)) %>% 
+  bind_rows(., active_colony_non_nesters) %>%
   left_join(., readRDS(here("data/HEP_site_names_nums_utm")) %>% 
-              select(CODE = code, SITE = site.name)) %>% 
+              select(CODE = code, SITE = site.name)) %>%  
   mutate(YEAR = zyear) %>% 
-  bind_rows(., active_colony_non_nesters) %>% 
   full_join(., hepdata_names) %>% 
   select(names(hepdata_names)) %>% 
   filter(!is.na(CODE))

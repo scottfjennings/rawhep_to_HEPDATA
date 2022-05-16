@@ -29,8 +29,9 @@ library(xlsx)
 
 
 source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/rawhep_to_HEPDATA_utility_functions.R")
+# source(here("code/rawhep_to_HEPDATA_utility_functions.R"))
 
-zyear = 2021
+zyear = 2020
 
 
 
@@ -294,11 +295,16 @@ safely(pmap(.l = list(file = here("code/step2_wrangled_to_season_summary.Rmd"), 
 pmap(.l = list(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = colony_spp_need_sheet$year[105:108], zcode = colony_spp_need_sheet$code[105:108], zspp = colony_spp_need_sheet$species[105:108]), .f = render_season_summary)
 
 # Note: you can generate a Season Summary Sheet for a single species X colony instance by specifying species and colony in the call to render_season_summary:
-render_season_summary(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = 2021, zcode = 70, zspp = "BCNH")
+render_season_summary(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = 2021, zcode = 1, zspp = c("GREG", "GBHE"))
 
 
 # Or all species for a single colony:
-pmap(.l = list(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = 2021, zcode = 53, zspp = c("GBHE", "GREG", "SNEG", "BCNH", "CAEG", "DCCO")), .f = render_season_summary)
+pmap(.l = list(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = 2021, zcode = 1, zspp = c("GBHE", "GREG"
+                                                                                                           #, "SNEG"
+                                                                                                           #, "BCNH"
+                                                                                                           #, "CAEG"
+                                                                                                           #, "DCCO"
+                                                                                                           )), .f = render_season_summary)
 
 
 
@@ -490,11 +496,23 @@ saveRDS(track_changes_hep, here(paste("data/track_changes/track_changes_hep_", z
 source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step6_screened_to_HEPDATA.R")
 # source(here("code/step6_screened_to_HEPDATA.R"))
 
-HEPDATA <- screened_to_HEPDATA(zyear) %>% 
+HEPDATA_active <- screened_to_HEPDATA_active_colonies(zyear) %>% 
   arrange(CODE, SPECIES)
 
+
+HEPDATA_inactive <- screened_to_HEPDATA_inactive_colonies(zyear, HEPDATA_active) %>% 
+  arrange(CODE, SPECIES)
+
+HEPDATA <- bind_rows(HEPDATA_active, HEPDATA_inactive) %>% 
+  distinct()
+
+zz <- full_join(HEPDATA_active %>% select(CODE, SPECIES) %>% mutate(active = TRUE),
+                HEPDATA_inactive %>% select(CODE, SPECIES) %>% mutate(inactive = TRUE))
+
+
 # there should be 6 records for each colony
-count(HEPDATA, CODE) %>% view()
+count(HEPDATA, CODE) %>% arrange(-n) %>% view()
+count(HEPDATA, CODE, SPECIES) %>% arrange(-n) %>% view()
 
 str(HEPDATA)
 

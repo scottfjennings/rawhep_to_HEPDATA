@@ -464,3 +464,23 @@ if(any(count(which_rop, date, code, multiple.survey.num) > 1)) {
 }
 return(which_rop)
 }
+
+
+
+# fix code for USGS Alcatraz data here
+#' Title
+#'
+#' @param ztab df with code for USGS-collected Alcatraz set to 70.888 
+#'
+#' @return df with all Alcatraz data code = 70
+#' @export
+#'
+#' @examples
+#' get_screened_col_spp(zyear) %>% fix_alc_code()
+#' 
+#' screened_hep <- map(screened_hep, fix_alc_code)
+fix_alc_code <- function(ztab) {
+ztab <- ztab %>% 
+  mutate(code = ifelse(code == 70.888, 70.0, code))
+}
+  

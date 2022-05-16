@@ -8,14 +8,20 @@
 # hepdata_names <- readRDS("data/HEPDATA_names")
 # we need to expand out to all possible columns here
 
-screened_to_HEPDATA <- function(zyear) {
-  
-  screened_sheets <- get_screened_col_spp(zyear) %>% 
+screened_to_HEPDATA_active_colonies <- function(zyear) {
+
+
+    
+screened_sheets <- get_screened_col_spp(zyear) %>% 
+    fix_alc_code() %>% 
     select(-screened) %>% 
     mutate(code = as.numeric(code))
   
   
 screened_hep <- readRDS(here(paste("data/screened/screened_hep_", zyear, sep = "")))
+
+
+screened_hep <- map(screened_hep, fix_alc_code)
 
 
 # 1         DATAID
@@ -187,9 +193,187 @@ HEPDATA_out <- full_join(HEPDATA_out, disturbance_out)
 # 96   BAEANESTING
 # 97  TUVUROOSTING
 
-# makes most sense to fix code for USGS Alcatraz data here
+
+
+nesting_predators <- screened_hep$predators %>%  
+  right_join(screened_sheets) %>% 
+  filter((nesting == 1 | tolower(copy.to.non.nesters) == "yes"), predator.species %in% c("GHOW", "RTHA", "OSPR", "CORA", "BAEA", "TUVU")) %>% 
+  mutate(predator = ifelse(predator.species == "TUVU", 
+                           paste(toupper(predator.species), "ROOSTING", sep = ""),
+                           paste(toupper(predator.species), "NESTING", sep = ""))) %>% 
+  distinct(code, species, predator, nesting)
+  
+
+predators <- nesting_predators %>% 
+  pivot_wider(id_cols = c(code, species), names_from = predator, values_from = nesting) %>% 
+  rename(CODE = code,
+         SPECIES = species) 
+  
+
+
+HEPDATA_out <- full_join(HEPDATA_out, predators)
+# 98 Entry_Proofed
+# 99    Entered_By
+
+hepdata_names <- readRDS("data/HEPDATA_names") %>% 
+              data.frame() %>% 
+              rename(colname = 1) %>% 
+              mutate(blah = NA) %>% 
+              pivot_wider(values_from = blah, names_from = colname)
+
+all_colony_species <- expand.grid(code = distinct(HEPDATA_out, CODE)$CODE,
+                                  species = c("GBHE", "GREG", "SNEG", "BCNH", "CAEG", "DCCO"))
+
+colony_notes<- HEPDATA_out %>% distinct(CODE, NOTES) %>% 
+  filter(!is.na(NOTES)) %>% 
+  group_by(CODE) %>% 
+  summarise(NOTES = paste(NOTES, collapse = ". "))
+
+colony_obs_effort <- effort %>% 
+  filter(!(CODE == 70 & SPECIES %in% c("BCNH", "SNEG"))) %>% # only want to use ACR effort from non-nesting records
+  select(CODE, NUMBERVISITS, TOTALHOURS) %>% 
+  distinct() %>% 
+  filter(!is.na(NUMBERVISITS))
+
+colony_disturbance <- disturbance %>%
+  select(-species) %>% 
+  filter(!is.na(date)) %>% 
+  select(code, date, type, result) %>%
+  distinct() %>% 
+  arrange(code, date) %>%
+  group_by(code) %>% 
+  mutate(dist.num = row_number()) %>% 
+  pivot_longer(cols = c(date, type, result)) %>% 
+  mutate(name = toupper(name),
+         outname = paste("DIST", dist.num, name, sep = "")) %>% 
+  pivot_wider(id_cols = c(code), names_from = outname, values_from = value) %>% 
+  rename(CODE = code) %>% 
+  filter_at(vars(contains("DIST")), any_vars(!is.na(.)))
+
+colony_predators <- predators %>%  
+  select(-SPECIES) %>% 
+  distinct() %>% 
+  filter_at(vars(contains("NESTING")), any_vars(!is.na(.)))
+
+
+active_colony_non_nesters <- all_colony_species %>% 
+  fix_alc_code() %>%  
+  rename(CODE = code, SPECIES = species) %>%
+  anti_join(distinct(HEPDATA_out, CODE, SPECIES)) %>% 
+  left_join(., colony_notes) %>% 
+  left_join(., colony_obs_effort) %>%
+  left_join(., colony_disturbance) %>%
+  left_join(., colony_predators) %>%   
+  mutate(PEAKACTVNSTS = 0,
+         Entry_Proofed = "",
+         Entered_By = paste("code-generated non-nesting record.", Sys.Date())) 
+
+
 HEPDATA_out <- HEPDATA_out %>% 
-  mutate(CODE = ifelse(CODE == 70.888, 70.0, CODE))
+  mutate(Entry_Proofed = "",
+         Entered_By = paste("code-generated record.", Sys.Date())) %>% 
+  filter(!is.na(CODE)) %>% 
+  left_join(., readRDS(here("data/HEP_site_names_nums_utm")) %>% 
+              select(CODE = code, SITE = site.name)) %>% 
+  mutate(YEAR = zyear) %>% 
+  bind_rows(., active_colony_non_nesters) %>% 
+  full_join(., hepdata_names) %>% 
+  select(names(hepdata_names)) %>% 
+  filter(!is.na(CODE))
+
+# add non-nesting records
+
+return(HEPDATA_out)
+}
+
+
+# HEPDATA <- screened_to_HEPDATA(zyear)
+
+##################################################################################
+##################################################################################
+##################################################################################
+##################################################################################
+
+screened_to_HEPDATA_inactive_colonies <- function(zyear) {
+
+
+    
+screened_sheets <- get_screened_col_spp(zyear) %>% 
+    fix_alc_code() %>% 
+    select(-screened) %>% 
+    mutate(code = as.numeric(code))
+  
+  
+
+
+wrangled_hep <- readRDS(here(paste("data/wrangled/wrangled_hep_", zyear, sep = "")))
+wrangled_hep <- map(wrangled_hep, fix_alc_code)
+
+
+# 1         DATAID
+# 2 YEAR; # 3 SITE; # 4 CODE; # 5 SPECIES
+# 2 added based on zyear above. 4, 5 are in every table, will be used to merge all tables, 3 added from saved site name file ----
+# 6 and 7 not consistently filled in current HEPDATA, these filled with NA at the end ----
+# 6   PEAKRICHNESS
+# 7   TOTALSPECIES
+#8 and 9 come from effort_summary ----
+# 8   NUMBERVISITS
+# 9     TOTALHOURS
+effort <- screened_hep$observers.effort %>% 
+  right_join(screened_sheets) %>% 
+  select(CODE = code, SPECIES = species, NUMBERVISITS = total.surveys, TOTALHOURS = total.hours)
+
+# 10  PEAKACTVNSTS ----
+# 16         NOTES ----
+spp_notes <- screened_hep$notes %>%  
+  right_join(screened_sheets) %>% 
+  filter(note.type == "for.HEPDATA.species", notes != "", !is.na(notes)) %>% 
+  select(CODE = code, SPECIES = species, NOTES.spp = notes) %>% 
+  distinct()
+
+col_notes <- screened_hep$notes %>%  
+  right_join(screened_sheets) %>% 
+  filter(note.type == "for.HEPDATA.colony", notes != "", !is.na(notes)) %>% 
+  select(CODE = code, SPECIES = species, NOTES.col = notes) %>% 
+  distinct()
+
+
+# disturbances ----
+# 65 DIST1DATE; # 66 DIST1TYPE; # 67 DIST1RESULT; # 68 DIST2DATE; # 69 DIST2TYPE; # 70 DIST2RESULT; # 71 DIST3DATE; # 72 DIST3TYPE; # 73 DIST3RESULT; # 74 DIST4DATE; # 75 DIST4TYPE; # 76 DIST4RESULT; # 77 DIST5DATE; # 78 DIST5TYPE; # 79 DIST5RESULT; # 80 DIST6DATE; # 81 DIST6TYPE; # 82 DIST6RESULT; # 83; DIST7DATE; # 84 DIST7TYPE; # 85 DIST7RESULT; # 86 DIST8DATE; # 87 DIST8TYPE; # 88 DIST8RESULT; # 89 DIST9DATE; # 90 DIST9TYPE; # 91 DIST9RESULT
+
+disturbance <- screened_hep$disturbance %>%  
+  right_join(screened_sheets) %>% 
+  mutate(result = tolower(result)) %>% 
+  filter(!grepl("x", type), !grepl("x", result)) %>% 
+  group_by(code, species) %>% 
+  arrange(code, species, date) %>% 
+  mutate(dist.num = row_number()) %>% 
+  ungroup() %>% 
+  full_join(data.frame(dist.num = seq(1, 8)))
+
+disturbance_long <- disturbance %>% 
+  select(code, species, date, type, result, dist.num) %>% 
+  pivot_longer(cols = c(date, type, result)) %>% 
+  mutate(name = toupper(name),
+         outname = paste("DIST", dist.num, name, sep = ""))
+
+disturbance_out <- disturbance_long %>% 
+  pivot_wider(id_cols = c(code, species), names_from = outname, values_from = value) %>% 
+  rename(CODE = code,
+         SPECIES = species) %>% 
+  filter(!is.na(CODE))
+
+
+HEPDATA_out <- full_join(HEPDATA_out, disturbance_out)
+
+# predators ----
+# 92   GHOWNESTING
+# 93   RTHANESTING
+# 94   OSPRNESTING
+# 95   CORANESTING
+# 96   BAEANESTING
+# 97  TUVUROOSTING
+
 
 
 nesting_predators <- screened_hep$predators %>%  
@@ -220,21 +404,33 @@ hepdata_names <- readRDS("data/HEPDATA_names") %>%
               mutate(blah = NA) %>% 
               pivot_wider(values_from = blah, names_from = colname)
 
-all_colony_species <- expand.grid(CODE = distinct(HEPDATA_out, CODE)$CODE,
-                                  SPECIES = c("GBHE", "GREG", "SNEG", "BCNH", "CAEG", "DCCO"))
+all_colony_species <- expand.grid(code = distinct(HEPDATA_out, CODE)$CODE,
+                                  species = c("GBHE", "GREG", "SNEG", "BCNH", "CAEG", "DCCO"))
 
 colony_notes<- HEPDATA_out %>% distinct(CODE, NOTES) %>% 
   filter(!is.na(NOTES)) %>% 
   group_by(CODE) %>% 
   summarise(NOTES = paste(NOTES, collapse = ". "))
 
-colony_obs_effort <- HEPDATA_out %>% 
+colony_obs_effort <- effort %>%
+  filter(!(CODE == 70 & SPECIES %in% c("BCNH", "SNEG"))) %>% 
   select(CODE, NUMBERVISITS, TOTALHOURS) %>% 
-  distinct()
-
-colony_disturbance <- HEPDATA_out %>% 
-  select(CODE, contains("DIST")) %>% 
   distinct() %>% 
+  filter(!is.na(NUMBERVISITS))
+
+colony_disturbance <- disturbance %>%
+  select(-species) %>% 
+  filter(!is.na(date)) %>% 
+  select(code, date, type, result) %>%
+  distinct() %>% 
+  arrange(code, date) %>%
+  group_by(code) %>% 
+  mutate(dist.num = row_number()) %>% 
+  pivot_longer(cols = c(date, type, result)) %>% 
+  mutate(name = toupper(name),
+         outname = paste("DIST", dist.num, name, sep = "")) %>% 
+  pivot_wider(id_cols = c(code), names_from = outname, values_from = value) %>% 
+  rename(CODE = code) %>% 
   filter_at(vars(contains("DIST")), any_vars(!is.na(.)))
 
 colony_predators <- HEPDATA_out %>% 
@@ -242,12 +438,14 @@ colony_predators <- HEPDATA_out %>%
   distinct() %>% 
   filter_at(vars(contains("NESTING")), any_vars(!is.na(.)))
 
-colony_info <- full_join(colony_notes, colony_obs_effort) %>% 
-  full_join(., colony_disturbance) %>% 
-  full_join(., colony_predators)
-
-no_data_non_nesters <- anti_join(all_colony_species, HEPDATA_out) %>% 
-  left_join(., colony_info) %>% 
+active_colony_non_nesters <- all_colony_species %>% 
+  fix_alc_code() %>%  
+  anti_join(screened_sheets) %>% 
+  rename(CODE = code, SPECIES = species) %>%
+  left_join(., colony_notes) %>% 
+  left_join(., colony_obs_effort) %>%
+  left_join(., colony_disturbance) %>%
+  left_join(., colony_predators) %>% 
   mutate(PEAKACTVNSTS = 0,
          Entry_Proofed = "",
          Entered_By = paste("code-generated non-nesting record.", Sys.Date())) 
@@ -257,7 +455,6 @@ HEPDATA_out <- HEPDATA_out %>%
   mutate(Entry_Proofed = "",
          Entered_By = paste("code-generated record.", Sys.Date())) %>% 
   filter(!is.na(CODE)) %>% 
-  bind_rows(., no_data_non_nesters) %>% 
   left_join(., readRDS(here("data/HEP_site_names_nums_utm")) %>% 
               select(CODE = code, SITE = site.name)) %>% 
   mutate(YEAR = zyear) %>% 
@@ -269,6 +466,3 @@ HEPDATA_out <- HEPDATA_out %>%
 
 return(HEPDATA_out)
 }
-
-
-# HEPDATA <- screened_to_HEPDATA(zyear)

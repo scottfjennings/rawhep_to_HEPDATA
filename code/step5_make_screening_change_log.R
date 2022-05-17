@@ -21,12 +21,13 @@ wrangled_table <- readRDS(here(paste("data/wrangled/wrangled_raw_", zyear, sep =
   mutate(record.in.wrangled = TRUE) %>% 
   mutate(across(everything(), as.character))
 
-if(ztable == "observers.effort") {
+# starting with 2021, observers.effort has species field and predators has date and multi survey fields. need to remove them
+if(ztable == "observers.effort" & zyear > 2020) {
   wrangled_table <- wrangled_table %>% 
     select(-species)
 }
 
-if(ztable == "predators") {
+if(ztable == "predators" & zyear > 2020) {
   wrangled_table <- wrangled_table %>% 
     select(-date, -multiple.survey.num)
 }

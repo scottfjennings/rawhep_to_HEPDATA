@@ -176,6 +176,10 @@ rop_dates <- read.csv("data/rop_dates.csv") %>%
   select(rop, rop.mid) %>% 
   pivot_wider(names_from = rop, values_from = rop.mid)
 
+if(nrow(rop_dates) == 0) {
+  stop(paste("ROP dates for ", zyear, " not supplied.\nPlease fill ROP dates in data/rop_dates.csv"))
+}
+
 which_rop <- s123 %>% 
   select(date, code, multiple.survey.num, complete.count) %>% 
   mutate(rop.1.dif = as.numeric(date - rop_dates$rop.1),

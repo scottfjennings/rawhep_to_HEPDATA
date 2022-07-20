@@ -211,7 +211,7 @@ which_rop <- s123 %>%
   filter(abs.diff == min(abs.diff)) %>% 
   ungroup()
 
-if(any(count(which_rop, date, code, multiple.survey.num) > 1)) {
+if(any(count(which_rop, date, code, multiple.survey.num)$n > 1)) {
   
   tie_cols_dates <- count(which_rop, date, code, multiple.survey.num) %>% 
     ungroup() %>% 
@@ -342,7 +342,7 @@ stage5_dates <- bird_stages %>%
 bird_brood_sizes <- birds %>% 
   filter(variable == "brd") %>% 
   select(code, date, multiple.survey.num, species, num.nests = value, brd = znum) %>% 
-  pivot_wider(id_cols = c(code, date, species, multiple.survey.num), names_from = brd, values_from = num.nests) %>% 
+  #pivot_wider(id_cols = c(code, date, species, multiple.survey.num), names_from = brd, values_from = num.nests) %>% 
   full_join(brd_size_dates, by = c("code", "date", "species")) %>% 
   full_join(stage5_dates, by = c("code", "date", "species")) %>% 
   arrange(code, species, date)

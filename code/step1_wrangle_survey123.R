@@ -43,7 +43,7 @@ colnames(s123) <- gsub("Please.describe.why.you.were.unable.to.complete.colony.c
 colnames(s123) <- gsub("Did.you.make.a.complete.count.of.all.nests.you.could.find.for.the.6.species.above.within.100m.of.the.colony.", "complete.count", colnames(s123))
                        
 s123 <- s123 %>%   
-  select(-starts_with(c("X.", "Tally.", "A.nest.is.active", "Re.locate.the", "Please", "Really", "You.have"))) %>% # drop fields that are really just instructions in the survey
+  select(-starts_with(c("X.", "Tally.", "A.nest.is.active", "Re.locate.the", "Please", "Really", "You.have", "in.future", "are.you.able"))) %>% # drop fields that are really just instructions in the survey
   rename(code = Select.Colony, start = Start.Time, end = End.Time,
          field.notes = Any.other.notes.belong.here.,
          predators.present = Did.you.see.any.potential.nest.predators.within.100m.of.the.colony.,
@@ -86,12 +86,23 @@ return(s123)
 #'  add_multiple_survey_num() %>%
 #'  wrangle_s123()
 fix_s123_date_fields <- function(s123, zformat = "%m/%d/%Y %I:%M:%S %p") {
-s123 <- s123 %>% 
+
+  
+  if(zyear <= 2021) {
+  s123 <- s123 %>% 
   mutate(start = as.POSIXct(start, format = zformat, tz = "GMT"),
          end = as.POSIXct(end, format = zformat, tz = "GMT")) %>% 
   mutate(start = with_tz(start, Sys.timezone(location = TRUE)),
          end = with_tz(end, Sys.timezone(location = TRUE)),
          date = as.Date(start, tz = Sys.timezone(location = TRUE)))
+  } else {
+      s123 <- s123 %>% 
+  mutate(date = as.Date(date, format = zformat, tz = "GMT"),
+         start = as.POSIXct(paste(date, start), format = "%Y-%m-%d %H:%M"),
+         end = as.POSIXct(paste(date, end), format = "%Y-%m-%d %H:%M"),
+         start = with_tz(start, Sys.timezone(location = TRUE)),
+         end = with_tz(end, Sys.timezone(location = TRUE)))
+  }
 }
 
 

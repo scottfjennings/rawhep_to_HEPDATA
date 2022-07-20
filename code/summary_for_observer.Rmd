@@ -370,10 +370,10 @@ historic_nest_abund4plot <- expand.grid(species = distinct(historic_nest_abund, 
 
 
 historic_nest_abund4plot %>%  
-  ggplot() + 
-  theme_bw()  +
+  ggplot()  +
   geom_col(aes(x = year, y = peakactvnsts), color = "black") +
-  scale_x_continuous(labels = seq(min(historic_nest_abund$year, na.rm = TRUE), zyear, by = 5), breaks = seq(min(historic_nest_abund$year, na.rm = TRUE), zyear, by = 5)) +
+  scale_x_continuous(labels = seq((floor(min(historic_nest_abund$year, na.rm = TRUE)/5)*5), (ceiling(zyear/5)*5), by = 5), 
+                     breaks = seq((floor(min(historic_nest_abund$year, na.rm = TRUE)/5)*5), (ceiling(zyear/5)*5), by = 5)) +
   #geom_text(data = filter(historic_nest_abund4plot, is.na(peakactvnsts)), aes(x = year, y = lab.na, label = "X")) +
   labs(y = "Total number of nests",
        x = "",
@@ -381,7 +381,8 @@ historic_nest_abund4plot %>%
        fill = "") +
   facet_wrap(~species, ncol = ceiling(distinct(historic_nest_abund4plot, species) %>% nrow()/2), scales = "free") + 
   geom_text(aes(year, peakactvnsts * 1.1, label = complete.count)) + 
-  geom_text(aes(year, lab.na, label = missing.data))
+  geom_text(aes(year, lab.na, label = missing.data)) + 
+  theme_bw()
 
 } else {
   print(paste("There is no data on nesting activity at ", site_name$site.name, " in previous years.", sep = ""))
@@ -591,7 +592,8 @@ historic_phenology %>%
   geom_col(aes(x = year, y = phen.prop.unguarded), color = "black") +
   geom_hline(aes(yintercept = hist.mean)) +
   geom_text(data = filter(historic_phenology4plot, is.na(phen.prop.unguarded)), aes(x = year, y = lab.na), label = "X") +
-  scale_x_continuous(labels = seq(min(historic_phenology$year), zyear, by = 5), breaks = seq(min(historic_phenology$year), zyear, by = 5)) +
+  scale_x_continuous(labels = seq((floor(min(historic_nest_abund$year, na.rm = TRUE)/5)*5), (ceiling(zyear/5)*5), by = 5), 
+                     breaks = seq((floor(min(historic_nest_abund$year, na.rm = TRUE)/5)*5), (ceiling(zyear/5)*5), by = 5)) +
   labs(y = "Proportion of nests unguarded",
        x = "",
        title = "Intraseasonal timing (horizontal line is long term average; X = no data)",
@@ -619,8 +621,8 @@ if(any(spp.nesting %in% c("GREG", "GBHE"))) {
 # stage 4 brood sizes
 if(nspp > 0) { # if there were >= 1 nest observed:
   if(any(spp.nesting %in% c("GREG", "GBHE"))) { # and if GREG or GBHE were nesting:
- brood_sizes <- wrangled_s123$brood.sizes %>% 
-  filter(code == zcode, species %in% core.spp.nesting) %>% 
+ brood_sizes <- wrangled_s123_21$brood.sizes %>% 
+  filter(code == zcode, species %in% core.spp.nesting) %>% names()
    group_by(species, date) %>% 
    mutate(tot.nests = sum(num.nests)) %>% 
    ungroup() %>% 

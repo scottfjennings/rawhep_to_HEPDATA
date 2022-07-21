@@ -96,7 +96,7 @@ observers_text <- paste(obs_list$observer.name, collapse = " and ")
   
 }
   
-obs_text <- gsub("and,", "and", observers_text)
+observers_text <- gsub("and\\,", "and", observers_text)
 
 if(nrow(obs_list) > 1 & any(obs_list$Coordinator. == "yes", na.rm = TRUE)) {
   observers_text <- paste(obs_text, "monitored the", distinct(seas_summary_observers, colony), "colony, and", filter(obs_list, Coordinator. == "yes")$observer.name, "was the site coordinator. These observers")
@@ -116,13 +116,16 @@ if(nrow(obs_list) == 1) {
 total.surveys <- wrangled_s123$dates %>% 
   filter(code == zcode) %>% 
   nrow()
-  
-
+if(total.surveys == 1) {
+  total.surveys <- paste(total.surveys, "site visit")
+}  else {
+  total.surveys <- paste(total.surveys, "site visits")
+}
 ```
 
 **Observers and effort**  
 
-In `r zyear`, `r observers_text` made `r total.surveys` site visits to the colony for a total of `r seas_summary_observers$total.hours` hours of observation.  
+In `r zyear`, `r observers_text` made `r total.surveys` to the colony for a total of `r seas_summary_observers$total.hours` hours of observation.  
 
 
 

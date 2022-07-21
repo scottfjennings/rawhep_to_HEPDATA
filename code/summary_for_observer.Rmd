@@ -775,7 +775,8 @@ historic_productivity4plot %>%
   geom_errorbar(aes(x = year, ymax = mean.chx.per.nest + st.err.chx.per.nest, ymin = mean.chx.per.nest - st.err.chx.per.nest))  +
   geom_col(aes(x = year, y = mean.chx.per.nest), color = "black") + 
   geom_text(data = filter(historic_productivity4plot, is.na(mean.chx.per.nest)), aes(x = year, y = lab.na), label = "X") +
-  scale_x_continuous(labels = seq(min(historic_productivity$year), zyear, by = 5), breaks = seq(min(historic_productivity$year), zyear, by = 5)) +
+  scale_x_continuous(labels = seq((floor(min(historic_nest_abund$year, na.rm = TRUE)/5)*5), (ceiling(zyear/5)*5), by = 5), 
+                     breaks = seq((floor(min(historic_nest_abund$year, na.rm = TRUE)/5)*5), (ceiling(zyear/5)*5), by = 5)) +
   labs(y = "Average pre-fledging brood size",
        x = "",
        title = "Mean Stage 4 Brood Size (X = no data)") +

@@ -43,7 +43,7 @@ return(hep_site_visits)
 #' @export
 #'
 #' @examples wrangled_site_visits <- wrangle_HEP_site_visits(hep_site_visits)
-wrangle_HEP_site_visits <- function(site_visits, col_codes, use.confidence = TRUE) {
+wrangle_HEP_site_visits <- function(site_visits, col_codes, use.front2 = FALSE, use.confidence = TRUE) {
 
 front1_wrangled = hep_site_visits$front1 %>% 
   filter(year(Date) == zyear) %>% 
@@ -129,7 +129,7 @@ back_nests <- hep_site_visits$back %>%
 
 nests_start <- full_join(front_nests, back_nests) %>% 
   mutate(across(contains("nests"), ~replace_na(., 0)),
-         total.nests = ifelse(total.nests.back > total.nests.front, total.nests.back, total.nests.front)) %>% 
+         total.nests = ifelse(use.front2 == TRUE & total.nests.back < total.nests.front, total.nests.front, total.nests.back)) %>% 
   select(code, date, species, total.nests) %>% 
   filter(!is.na(species)) %>% 
   left_join(., dates %>% select(code, date, multiple.survey.num, complete.count)) %>% 

@@ -412,8 +412,8 @@ df <- df %>%
 #' @export
 #'
 #' @examples
-assign_rop <- function(df, rop_dates){
-rop_dates <- rop_dates %>% 
+assign_rop <- function(df, rop_dates, zyear){
+rop_dates_zyear <- rop_dates %>% 
   filter(year == zyear) %>% 
   mutate(across(contains("date"), mdy)) %>% 
   mutate(rop.mid = end.date - 1,
@@ -423,12 +423,13 @@ rop_dates <- rop_dates %>%
 
 which_rop <- df %>% 
   select(date, code, multiple.survey.num, complete.count) %>% 
-  mutate(rop.1.dif = as.numeric(date - rop_dates$rop.1),
-         rop.2.dif = as.numeric(date - rop_dates$rop.2),
-         rop.3.dif = as.numeric(date - rop_dates$rop.3),
-         rop.4.dif = as.numeric(date - rop_dates$rop.4),
-         rop.5.dif = as.numeric(date - rop_dates$rop.5),
-         rop.6.dif = as.numeric(date - rop_dates$rop.6)) %>% 
+  mutate(date = as.Date(date, tz=Sys.timezone()),
+         rop.1.dif = as.numeric(date - rop_dates_zyear$rop.1),
+         rop.2.dif = as.numeric(date - rop_dates_zyear$rop.2),
+         rop.3.dif = as.numeric(date - rop_dates_zyear$rop.3),
+         rop.4.dif = as.numeric(date - rop_dates_zyear$rop.4),
+         rop.5.dif = as.numeric(date - rop_dates_zyear$rop.5),
+         rop.6.dif = as.numeric(date - rop_dates_zyear$rop.6)) %>% 
   pivot_longer(cols = contains("rop")) %>% 
   mutate(abs.diff = abs(value)) %>% 
   arrange(code, name, date) %>% 

@@ -184,34 +184,35 @@ stages <- hep_site_visits$back %>%
 # "brd.size.date"
 # "stage5.nests"
 
-if(use.confidence == TRUE) {
-stage4_5 <- hep_site_visits$back %>%
+
+
+stage5 <- hep_site_visits$back %>%
   right_join(sheets) %>% # filters to zyear 
   left_join(dates) %>% 
   rename(species = SpeciesCode, stage = Stage, chicks = Chicks) %>%  
-  filter(Confidence ==1, Status == "A", between(stage, 4, 5)) %>% 
-  group_by(code, date, multiple.survey.num, species, stage, chicks) %>%
-  summarise(num.nests = n()) %>% 
-  ungroup()
-} else {
-  stage4_5 <- hep_site_visits$back %>%
-  right_join(sheets) %>% # filters to zyear 
-  left_join(dates) %>% 
-  rename(species = SpeciesCode, stage = Stage, chicks = Chicks) %>%  
-  filter(Status == "A", between(stage, 4, 5)) %>% 
-  group_by(code, date, multiple.survey.num, species, stage, chicks) %>%
-  summarise(num.nests = n()) %>% 
-  ungroup()
-}
-
-
-stage5 <- stage4_5 %>% 
-  filter(stage == 5 & num.nests > 0) %>% 
-  distinct(code, species, date) %>% 
+  filter(Status == "A", stage == 5) %>% 
+  distinct(code, date, species) %>%
   mutate(stage5.nests = TRUE)
 
-brood.sizes <- stage4_5 %>%
-  filter(stage == 4) %>% 
+if(use.confidence == TRUE) {
+brood.sizes.start <- hep_site_visits$back %>%
+  right_join(sheets) %>% # filters to zyear 
+  left_join(dates) %>% 
+  rename(species = SpeciesCode, stage = Stage, chicks = Chicks) %>%  
+  filter(Status == "A", stage == 4, Confidence == TRUE)
+  
+} else {
+brood.sizes.start <- hep_site_visits$back %>%
+  right_join(sheets) %>% # filters to zyear 
+  left_join(dates) %>% 
+  rename(species = SpeciesCode, stage = Stage, chicks = Chicks) %>%  
+  filter(Status == "A", stage == 4)
+
+}
+
+brood.sizes <- brood.sizes.start  %>% 
+  group_by(code, date, multiple.survey.num, species, chicks) %>%
+  summarise(num.nests = n()) %>% 
   select(code, date, multiple.survey.num, species, num.nests, brd = chicks) %>% 
   group_by(code, species) %>% 
   mutate(brd.size.date = ifelse(date == max(date), TRUE, NA),

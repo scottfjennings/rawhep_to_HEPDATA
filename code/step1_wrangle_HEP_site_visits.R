@@ -126,16 +126,23 @@ back_nests <- hep_site_visits$back %>%
   summarise(total.nests.back = n()) %>% 
   ungroup()
 
-nests <- full_join(front_nests, back_nests) %>% 
+nests_start <- full_join(front_nests, back_nests) %>% 
   mutate(across(contains("nests"), ~replace_na(., 0)),
          total.nests = ifelse(total.nests.back > total.nests.front, total.nests.back, total.nests.front)) %>% 
   select(code, date, species, total.nests) %>% 
   filter(!is.na(species)) %>% 
   left_join(., dates %>% select(code, date, multiple.survey.num, complete.count)) %>% 
-  left_join(., front1_wrangled %>% select(date, code, obs.initials = ObsInitial)) %>% 
-  group_by(code, species) %>% 
-  mutate(peak.active = ifelse(total.nests == max(total.nests), 1, 0)) %>% 
+  left_join(., front1_wrangled %>% select(date, code, obs.initials = ObsInitial))
+
+peak_active <- nests_start %>% 
+  group_by(code, species)  %>% 
+  filter(total.nests ==  max(total.nests) & total.nests > 0) %>% 
+  filter(date == min(date)) %>% 
   ungroup() %>% 
+  select(-total.nests) %>% 
+  mutate(peak.active = TRUE)
+
+nests <- full_join(nests_start, peak_active) %>% 
   arrange(code, species, date) %>% 
   filter(code %in% col_codes)
 

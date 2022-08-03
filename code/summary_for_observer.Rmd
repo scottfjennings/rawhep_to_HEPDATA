@@ -627,10 +627,11 @@ if(nspp > 0) { # if there were >= 1 nest observed:
  brood_sizes <- wrangled_s123$brood.sizes %>% 
   filter(code == zcode, species %in% core.spp.nesting) %>% 
    group_by(species, date) %>% 
-   mutate(tot.nests = sum(num.nests)) %>% 
+   mutate(tot.nests = sum(num.nests),
+          brd.size.date = ifelse(is.na(brd.size.date), FALSE, brd.size.date)) %>% 
    ungroup() %>% 
    filter(tot.nests > 0)
-    if(nrow(brood_sizes) > 0) { # and if there is brood size data:
+    if(nrow(brood_sizes) > 0 & any(brood_sizes$brd.size.date == TRUE)) { # and if there is brood size data:
       # pivot wider for display in summary
 brood_sizes_wide <- brood_sizes %>% 
   arrange(species, date, brd) %>% 

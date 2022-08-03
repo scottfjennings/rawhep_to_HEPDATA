@@ -245,7 +245,8 @@ One of the main pieces of information observers collect each visit is the total 
 if(nspp > 0) {
 nest_totals <- zyear_nesters %>% 
   arrange(species, date) %>% 
-  mutate(date = paste(month(date), day(date), sep = "-"),
+  mutate(multiple.survey.num = ifelse(multiple.survey.num > 1, paste("_", multiple.survey.num, sep = ""), ""),
+         date = paste(paste(month(date), day(date), sep = "-"), multiple.survey.num, sep = ""),
          date = ifelse(complete.count == "no", paste(date, "*", sep = ""), date)) %>% 
   select(-code, -peak.active, -complete.count, -obs.initials, -multiple.survey.num) %>% 
   pivot_wider(values_from = total.nests, names_from = date) %>% 
@@ -406,7 +407,8 @@ nest_stages_df <- wrangled_s123$stages %>%
   filter(code == zcode, species %in% core.spp.nesting) %>% 
   mutate(stage = paste("stage", stage, sep = ".")) %>% 
   arrange(date) %>% 
-  mutate(date = paste(month(date), day(date), sep = "-"),
+  mutate(multiple.survey.num = ifelse(multiple.survey.num > 1, paste("_", multiple.survey.num, sep = ""), ""),
+         date = paste(paste(month(date), day(date), sep = "-"), multiple.survey.num, sep = ""),
          num.nests = as.character(num.nests)) %>% 
   select(-multiple.survey.num) %>% 
   pivot_wider(id_cols = c(species, stage), names_from = date, values_from = num.nests) %>% 
@@ -425,7 +427,7 @@ phen_stages <- wrangled_s123$stages %>%
         # use it to calculate proportion unguarded
 zyear_phenology <- phen_stages %>% 
   mutate(stage = paste("phen.stage", stage, sep = "")) %>% 
-  pivot_wider(id_cols = species, names_from = stage, values_from = num.nests) %>% 
+  pivot_wider(id_cols = c(species, multiple.survey.num), names_from = stage, values_from = num.nests) %>% 
   mutate(across(contains("phen.stage"), ~replace_na(., 0)),
          phen.prop.unguarded = (phen.stage4 + phen.stage5)/(phen.stage1 + phen.stage2 + phen.stage3 + phen.stage4 + phen.stage5),
          phen.prop.unguarded.se = sqrt((phen.prop.unguarded *(1-phen.prop.unguarded)) / (phen.stage1 + phen.stage2 + phen.stage3 + phen.stage4 + phen.stage5)))
@@ -626,7 +628,7 @@ if(nspp > 0) { # if there were >= 1 nest observed:
   if(any(spp.nesting %in% c("GREG", "GBHE"))) { # and if GREG or GBHE were nesting:
  brood_sizes <- wrangled_s123$brood.sizes %>% 
   filter(code == zcode, species %in% core.spp.nesting) %>% 
-   group_by(species, date) %>% 
+   group_by(species, date, multiple.survey.num) %>% 
    mutate(tot.nests = sum(num.nests),
           brd.size.date = ifelse(is.na(brd.size.date), FALSE, brd.size.date)) %>% 
    ungroup() %>% 
@@ -634,18 +636,19 @@ if(nspp > 0) { # if there were >= 1 nest observed:
     if(nrow(brood_sizes) > 0 & any(brood_sizes$brd.size.date == TRUE)) { # and if there is brood size data:
       # pivot wider for display in summary
 brood_sizes_wide <- brood_sizes %>% 
-  arrange(species, date, brd) %>% 
+  arrange(species, date, multiple.survey.num, brd) %>% 
   mutate(brd = paste("brd.", brd, sep = ""),
          year = zyear,
          stage5.nests = replace_na(stage5.nests, FALSE)) %>% 
   #select(-multiple.survey.num) %>% 
-  pivot_wider(id_cols = c(species, date, stage5.nests), values_from = num.nests, names_from = brd) %>% 
+  pivot_wider(id_cols = c(species, date, multiple.survey.num, stage5.nests), values_from = num.nests, names_from = brd) %>% 
   mutate(date = ymd(date)) %>% 
-  arrange(species, date) %>%  
+  arrange(species, date, multiple.survey.num) %>%  
   group_by(species) %>% 
   mutate(species = ifelse(date == min(date), translate_bird_names(species, "alpha.code", "common.name"), "")) %>% 
-  mutate(date = paste(month(date), day(date), sep = "-")) %>%
-  select(species, date, everything())
+  mutate(multiple.survey.num = ifelse(multiple.survey.num > 1, paste("_", multiple.survey.num, sep = ""), ""),
+         date = paste(paste(month(date), day(date), sep = "-"), multiple.survey.num, sep = "")) %>%
+  select(species, date, everything(), -multiple.survey.num)
 # use it to calculate productivity
 zyear_productivity <- wrangled_s123$brood.sizes %>% 
   filter(code == zcode, species %in% core.spp.nesting, brd.size.date == TRUE) %>%
@@ -821,9 +824,10 @@ disturbance <- wrangled_s123$disturbance %>%
 if(nrow(disturbance) > 0) {
 flextable(disturbance) %>% 
   autofit() %>% 
-  fit_to_width(max_width = 7.5) %>% 
+  #fit_to_width(max_width = 7.5) %>% 
   width(j = 3, width = 4) %>% 
-    set_caption(caption = "Disturbance events observed or inferred", style = "Normal")
+    set_caption(caption = "Disturbance events observed or inferred", style = "Normal") %>% 
+    fontsize(size = 10, part = "all")
 } else {
   print(paste("There was no disturbance observed at ", site_name$site.name, " in ", zyear, sep = ""))
 }

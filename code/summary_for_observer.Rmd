@@ -653,10 +653,10 @@ brood_sizes_wide <- brood_sizes %>%
 zyear_productivity <- wrangled_s123$brood.sizes %>% 
   filter(code == zcode, species %in% core.spp.nesting, brd.size.date == TRUE) %>%
   mutate(brd = paste("brd", brd, sep = "")) %>% 
-  pivot_wider(id_cols = c(code, species), names_from = brd, values_from = num.nests) %>% 
+  pivot_wider(id_cols = c(code, species, date, multiple.survey.num), names_from = brd, values_from = num.nests) %>% 
   mutate(across(contains("brd"), ~replace_na(., 0)),
          total.brd.nests = brd1 + brd2 + brd3 + brd4 + brd5) %>% 
-  group_by(species, code) %>% 
+  group_by(species, code, date, multiple.survey.num) %>% 
   mutate(mean.chx.per.nest = mean(c(rep(1, brd1), rep(2, brd2), rep(3, brd3), rep(4, brd4), rep(5, brd5))),
          sd.chx.per.nest = sd(c(rep(1, brd1), rep(2, brd2), rep(3, brd3), rep(4, brd4), rep(5, brd5)))) %>% 
   ungroup() %>% 

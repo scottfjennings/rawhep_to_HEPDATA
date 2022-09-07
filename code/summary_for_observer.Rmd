@@ -58,7 +58,7 @@ site_name = readRDS(here("data/HEP_site_names_nums_utm")) %>%
 
 
 ```{r, echo=FALSE, fig.align='center'}
-include_graphics("ACR-logobug_w_initials.jpg")
+include_graphics("ACR-logo2022-transparent.jpg")
 ```
 
 

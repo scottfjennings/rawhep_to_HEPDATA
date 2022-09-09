@@ -337,8 +337,10 @@ disturbance <- wrangled_raw$disturbance %>%
 Disturbance to colony
 ```{r}
 flextable(disturbance) %>% 
-  autofit() %>% 
+  #autofit() %>% 
+  width(1:4, width = .5) %>% 
   width(5, width = 3) %>% 
+  width(6:8, width = .5) %>%
   fit_to_width(max_width = 8.5)
 ```
 Disturbance types: A = Avian, H = Human, W = Weather, M = Mammal, O = ACR field observer, P = Unknown Predator, U = unknown  

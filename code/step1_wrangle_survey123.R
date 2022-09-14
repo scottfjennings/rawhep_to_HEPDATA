@@ -352,7 +352,9 @@ bird_brood_sizes <- birds %>%
 # predators, disturbance, notes details ----
 # for these 3 data types, data come in at the colony level, but when output to Season Summary sheets they are expanded to the colony X species level, and this is how they eventually get input into HEPDATA. Tracking screening changes is easier if these 3 data types are explicitly expanded out to the colony X species level at this stage, rather than relying on implicit expansion at step 2. This expansion is done with the full_join(., distinct(birds, code, species)) call in the final step of each process for these data types
 # predators ----
+# temporarily save global warning options
 oldw <- getOption("warn")
+# suppress all global warnings
 options(warn = -1)
 predators  <- s123 %>% 
   select(code, date, multiple.survey.num, contains("predator.species")) %>% 
@@ -361,6 +363,7 @@ predators  <- s123 %>%
   mutate(predator.species = paste(bird_names_from_text(predator.species), get_terrestrial_predators(predator.species), sep = "_")) %>% 
   separate(predator.species, into = paste("pred.sp", seq(1:6), sep = ""), sep = "_") %>% 
   mutate(obs.type = ifelse(grepl("nesting", obs.type), "nesting", "present"))
+# reset to old global warnings setting
 options(warn = oldw)
 
 predators_longer <- predators %>% 

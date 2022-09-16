@@ -20,6 +20,11 @@
 ## Prepare workspace 
 # load the required packages, source the utility functions code file, and indicate the year you will be processing.
 
+# The birdnames package can be installed on your computer by running the following code:
+# install.packages("devtools")
+# devtools::install_github("scottfjennings/birdnames")
+
+
 library(tidyverse)
 library(lubridate)
 library(here)
@@ -31,13 +36,19 @@ library(xlsx)
 source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/rawhep_to_HEPDATA_utility_functions.R")
 # source(here("code/rawhep_to_HEPDATA_utility_functions.R"))
 
-zyear = 2020
+zyear = 2022
+
+
+# view list of HEP sites and codes
+source("https://raw.githubusercontent.com/scottfjennings/HEP_data_work/master/HEP_code/HEP_utility_functions.R")
+#obs_list <- hep_sites_from_access(here("C:/Users/scott.jennings/Documents/Projects/core_monitoring_research/HEP/HEP_data_work/HEP_data/HEPDATA.accdb")) %>% view()
+
 
 
 
 # Step 1, Wrangle ---- 
 # convert Survey123, HEP_site_visits and USGS Alcatraz data into the same (more-usable) format
-### First Survey123 ----
+### step 1.a Survey123 ----
 # This step uses functions from step1_wrangle_survey123.R, which can be piped together into a single process.
 
 source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step1_wrangle_survey123.R")
@@ -65,17 +76,17 @@ names(wrangled_s123)
 
 
 
-str(wrangled_s123$nests)
-
+str(wrangled_s123$brood.sizes)
+readRDS("data/wrangled/wrangled_s123_2021")$brood.sizes %>% str()
 
 # Save wrangled_s123 to the appropriate folder.
 
 wrangled_s123 %>% saveRDS(paste("data/wrangled/wrangled_s123", zyear, sep = "_"))
 
 
+# end of 1.a Survey123
 
-
-### Next, Alcatraz. ----
+### 1.b Alcatraz. ----
 # Wrangling Alcatraz data requires some manual data checks and the process cannot be fully automated into a single pipeline of executable functions. 
 # Alcatraz step 1. read source, data 
 source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step1_wrangle_alcatraz.R")
@@ -137,33 +148,38 @@ wrangled_alcatraz <- wrangle_alcatraz(alcatraz_checks_stages)
 wrangled_alcatraz %>% 
   saveRDS(here("data/wrangled/wrangled_alcatraz_2021"))
 
+# end of 1.b Alcatraz
 
-### And HEP_site_visits ----
+### 1.c HEP_site_visits ----
 # 
 source(here("code/step1_wrangle_HEP_site_visits.R"))
 
 hep_site_visits <- hep_site_visits_from_access("C:/Users/scott.jennings/Documents/Projects/core_monitoring_research/HEP/HEP_screening_focal/HEP_site_visit_data.accdb")
 
-col_codes = c(53)
+col_codes = c(53, 53.1, 999)
 
 wrangled_site_visits <- wrangle_HEP_site_visits(hep_site_visits, col_codes = col_codes)
 
 saveRDS(wrangled_site_visits, paste("data/wrangled/wrangled_site_visits", zyear, sep = "_"))
 
-### Finally combine the wrangled data from each raw data source.----
 
+# end of 1.c HEP_site_visits
+
+
+### 1.d combine wrangled ----
+# Finally combine the wrangled data from each raw data source.
 source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step1_combine_wrangled.R")
-source(here("code/step1_combine_wrangled.R"))
+#source(here("code/step1_combine_wrangled.R"))
 
 combine_wrangled_hep = combine_wrangled_hep(wrangled_s123 = readRDS(here(paste("data/wrangled/wrangled_s123", zyear, sep = "_"))),
-                                            wrangled_alcatraz = readRDS(here(paste("data/wrangled/wrangled_alcatraz", zyear, sep = "_"))),
+                                            #wrangled_alcatraz = readRDS(here(paste("data/wrangled/wrangled_alcatraz", zyear, sep = "_"))),
                                             wrangled_site_visits = readRDS(here(paste("data/wrangled/wrangled_site_visits", zyear, sep = "_"))))
 
 combine_wrangled_hep %>% saveRDS(paste("data/wrangled/wrangled_raw", zyear, sep = "_"))
 
 # combine_wrangled_hep <- readRDS(paste("data/wrangled/wrangled_raw", zyear, sep = "_"))
 
- 
+# end of step 1
 
 ## Step 1.1, Check incoming data ----
 # Next are some functions and code to check for any data issues and prepare for manual screening. These checks are largely meant to identify "proofing" problems that need to be fixed directly in Survey123.
@@ -226,8 +242,10 @@ check_expected_observers(zyear) %>% # from survey123_utility_functions.R
   filter(only.unexpected.observer == TRUE) %>% 
   view()
 
+# end of step 1.1
 
-## Step 1.2. At this point the summaries for observers can be generated ----
+## Step 1.2. Observer summaries ----
+# At this point the summaries for observers can be generated if desired
 
 # Generate a list of colonies that had a volunteer observer and at least 1 species nesting.
 # need to resplit the list of observers
@@ -256,21 +274,20 @@ obs_list <- colony_vol_obs  %>%
   distinct(code, colony) %>% 
   mutate(year = zyear) 
 
+# obs_list <- obs_list %>% filter(code %in% c(160, 160.1, 181, 183, 184, 186))
 
+pmap(.l = list(file = here("code/summary_for_observer.Rmd"), zyear = 2022, zcode = 171, zcol.name = "BrooksIslandSpit"), .f = render_summary_for_observer)
 
-
-pmap(.l = list(file = here("code/summary_for_observer.Rmd"), zyear = 2021, zcode = 83.0, zcol.name = "BlakesLandingSouth"), .f = render_summary_for_observer)
-
-pmap(.l = list(file = here("code/summary_for_observer.Rmd"), zyear = obs_list$year[16], zcode = obs_list$code[16], zcol.name = obs_list$colony[16]), .f = render_summary_for_observer)
+pmap(.l = list(file = here("code/summary_for_observer.Rmd"), zyear = obs_list$year[2], zcode = obs_list$code[2], zcol.name = obs_list$colony[2]), .f = safely(render_summary_for_observer))
 
 pmap(.l = list(file = here("code/summary_for_observer.Rmd"), zyear = obs_list$year[9:51], zcode = obs_list$code[9:51], zcol.name = obs_list$colony[9:51]), .f = render_summary_for_observer)
 
-pmap(.l = list(file = here("code/summary_for_observer.Rmd"), zyear = obs_list$year, zcode = obs_list$code, zcol.name = obs_list$colony), .f = render_summary_for_observer)
+render_list <- pmap(.l = list(file = here("code/summary_for_observer.Rmd"), zyear = obs_list$year, zcode = obs_list$code, zcol.name = obs_list$colony), .f = safely(render_summary_for_observer))
 
 
  
-## Step 2, output wrangled Survey123 data into Season Summary sheets. ----
-
+## Step 2, output Season Summary sheets. ----
+# output wrangled Survey123 data into Season Summary sheets.
 # We want to create a sheet for each instance where a species nested in a colony. 
 
 # The function get_colony_spp_need_sheet() queries wrangled_s123 to get a list of all species in each colony this year, and queries the year-appropriate season_summary_forms folder to create a list of colony X species that still need a Season Summary Sheet created. Rendering Season Summary Sheets to .docx files is the most time-consuming process of this workflow, so it is beneficial to only render each sheet once.
@@ -295,15 +312,16 @@ safely(pmap(.l = list(file = here("code/step2_wrangled_to_season_summary.Rmd"), 
 pmap(.l = list(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = colony_spp_need_sheet$year[105:108], zcode = colony_spp_need_sheet$code[105:108], zspp = colony_spp_need_sheet$species[105:108]), .f = render_season_summary)
 
 # Note: you can generate a Season Summary Sheet for a single species X colony instance by specifying species and colony in the call to render_season_summary:
-render_season_summary(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = 2021, zcode = 1, zspp = c("GREG", "GBHE"))
+render_season_summary(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = 2022, zcode = 128, zspp = "GBHE")
 
 
 # Or all species for a single colony:
-pmap(.l = list(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = 2021, zcode = 1, zspp = c("GBHE", "GREG"
+pmap(.l = list(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = 2022, zcode = 53, zspp = c("GBHE"
+                                                                                                            #, "GREG"
                                                                                                            #, "SNEG"
                                                                                                            #, "BCNH"
                                                                                                            #, "CAEG"
-                                                                                                           #, "DCCO"
+                                                                                                           , "DCCO"
                                                                                                            )), .f = render_season_summary)
 
 
@@ -485,7 +503,7 @@ track_changes_hep$notes <- track_changes_hep$notes %>%
 
 saveRDS(track_changes_hep, here(paste("data/track_changes/track_changes_hep_", zyear, sep = ""))) 
 
-  
+
   
   
 ## Step 6 convert to HEPDATA ----
@@ -506,8 +524,8 @@ HEPDATA_inactive <- screened_to_HEPDATA_inactive_colonies(zyear, HEPDATA_active)
 HEPDATA <- bind_rows(HEPDATA_active, HEPDATA_inactive) %>% 
   distinct()
 
-zz <- full_join(HEPDATA_active %>% select(CODE, SPECIES) %>% mutate(active = TRUE),
-                HEPDATA_inactive %>% select(CODE, SPECIES) %>% mutate(inactive = TRUE))
+#zz <- full_join(HEPDATA_active %>% select(CODE, SPECIES) %>% mutate(active = TRUE),
+#                HEPDATA_inactive %>% select(CODE, SPECIES) %>% mutate(inactive = TRUE))
 
 
 # there should be 6 records for each colony

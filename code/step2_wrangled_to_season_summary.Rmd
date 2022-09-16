@@ -350,7 +350,7 @@ Disturbance results: 0 = none, 1 = behavioral response, 2 = nest failure, 3 = ab
 # predators
 predators <- wrangled_raw$predators %>% 
   filter(code == zcode, species == zspp) %>% 
-  mutate(copy.to.non.nesters = "no") 
+  mutate(copy.to.non.nesters = ifelse(nesting == 1, "yes", "no")) 
 
 ```
 <br> 

@@ -38,6 +38,7 @@ return(hep_site_visits)
 #' @param site_visits hep_site_visits data as a list with 4 elements for the 4 main tables in HEP_site_visit_data: front1, front2, back, and predators. use hep_site_visits_from_access to generate this list
 #' @param col_codes character string of colony codes to include
 #' @param use.confidence logical, should brood sizes be calculated only using records with the Confidence box checked (TRUE, default), or use all stage 4 records (FALSE)
+#' @param use.front2 should information from the front2 portion of HEP_site_visits_data be used to calculate total.nests
 #'
 #' @return a list with 8 elements, matching the structure of the other wrangled_ lists (e.g., wrangled_S123)
 #' @export

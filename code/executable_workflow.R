@@ -151,15 +151,15 @@ wrangled_alcatraz %>%
 # end of 1.b Alcatraz
 
 ### 1.c HEP_site_visits ----
-# 
+# load necessary functions
 source(here("code/step1_wrangle_HEP_site_visits.R"))
-
+# read data
 hep_site_visits <- hep_site_visits_from_access("C:/Users/scott.jennings/Documents/Projects/core_monitoring_research/HEP/HEP_screening_focal/HEP_site_visit_data.accdb")
-
+# specify which colonies to wrangle
 col_codes = c(53, 53.1, 999)
-
+# wrangle
 wrangled_site_visits <- wrangle_HEP_site_visits(hep_site_visits, col_codes = col_codes)
-
+# and save
 saveRDS(wrangled_site_visits, paste("data/wrangled/wrangled_site_visits", zyear, sep = "_"))
 
 
@@ -171,9 +171,13 @@ saveRDS(wrangled_site_visits, paste("data/wrangled/wrangled_site_visits", zyear,
 source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step1_combine_wrangled.R")
 #source(here("code/step1_combine_wrangled.R"))
 
-combine_wrangled_hep = combine_wrangled_hep(wrangled_s123 = readRDS(here(paste("data/wrangled/wrangled_s123", zyear, sep = "_"))),
-                                            #wrangled_alcatraz = readRDS(here(paste("data/wrangled/wrangled_alcatraz", zyear, sep = "_"))),
-                                            wrangled_site_visits = readRDS(here(paste("data/wrangled/wrangled_site_visits", zyear, sep = "_"))))
+# if you haven't wrangled site_visits and/or alcatraz yet, you can proceed with subsequent steps by combining the data tha have been wrangled 
+# you can comment out the lines for un-wrangled data
+# note, be sure to check
+combine_wrangled_hep = combine_wrangled_hep(wrangled_s123 = readRDS(here(paste("data/wrangled/wrangled_s123", zyear, sep = "_")))
+                                            #, wrangled_alcatraz = readRDS(here(paste("data/wrangled/wrangled_alcatraz", zyear, sep = "_")))
+                                            , wrangled_site_visits = readRDS(here(paste("data/wrangled/wrangled_site_visits", zyear, sep = "_")))
+                                            )
 
 combine_wrangled_hep %>% saveRDS(paste("data/wrangled/wrangled_raw", zyear, sep = "_"))
 
@@ -308,8 +312,6 @@ colony_spp_need_sheet <- full_join(colony_spp_need_sheet, recent_nesters) %>%
 # The colony_spp_need_sheet object has the colony and species fields for purrr::map to iterate over to create each sheet.
 safely(pmap(.l = list(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = colony_spp_need_sheet$year, zcode = colony_spp_need_sheet$code, zspp = colony_spp_need_sheet$species), .f = render_season_summary))
 
-# The colony_spp_need_sheet object has the colony and species fields for purrr::map to iterate over to create each sheet.
-pmap(.l = list(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = colony_spp_need_sheet$year[105:108], zcode = colony_spp_need_sheet$code[105:108], zspp = colony_spp_need_sheet$species[105:108]), .f = render_season_summary)
 
 # Note: you can generate a Season Summary Sheet for a single species X colony instance by specifying species and colony in the call to render_season_summary:
 render_season_summary(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = 2022, zcode = 128, zspp = "GBHE")

@@ -169,7 +169,7 @@ seas_summary_observers <- observers %>%
   
 
 observers_effort <- full_join(seas_summary_observers, effort, by = "code") %>% 
-  left_join(readRDS(here("data/HEP_site_names_nums_utm")), by = "code") %>% 
+  left_join(readRDS(here("data/support_data/HEP_site_names_nums_utm")), by = "code") %>% 
   select(code, colony = site.name, observers, total.days, total.surveys, total.hours)
 
 
@@ -179,7 +179,7 @@ dates <- s123 %>%
   select(date, code, multiple.survey.num, start, end, num.surveys.this.date, complete.count)
 
 # determine which ROP each survey date belongs to
-rop_dates <- read.csv("data/rop_dates.csv") %>% 
+rop_dates <- read.csv("data/support_data/rop_dates.csv") %>% 
   filter(year == zyear) %>% 
   mutate(across(contains("date"), mdy)) %>% 
   mutate(rop.mid = end.date - 1,

@@ -100,7 +100,7 @@ observers.effort = front1_wrangled %>%
               distinct(code, date) %>% 
               group_by(code) %>% 
               summarise(total.days = n())) %>% 
-  left_join(readRDS(here("data/HEP_site_names_nums_utm")), by = "code") %>% 
+  left_join(readRDS(here("data/support_data/HEP_site_names_nums_utm")), by = "code") %>% 
   select(code, colony = site.name, observers, total.days, total.surveys, total.hours) %>% 
   filter(code %in% col_codes)
   
@@ -169,7 +169,7 @@ stages <- hep_site_visits$back %>%
   filter(year(date) == zyear) %>% 
   full_join(., dates %>% 
               mutate(date = ymd(date)) %>%
-              assign_rop(rop_dates = read.csv("data/rop_dates.csv"))) %>% 
+              assign_rop(rop_dates = read.csv("data/support_data/rop_dates.csv"), zyear)) %>% 
   select(code, date, multiple.survey.num, species, num.nests, stage, complete.count, which.rop) %>% 
   mutate(which.rop = replace_na(which.rop, "other"),
          stage = as.character(stage)) %>% 
@@ -211,16 +211,24 @@ brood.sizes.start <- hep_site_visits$back %>%
 
 }
 
+
+brd_filler <- brood.sizes.start %>% 
+  distinct(code, date, multiple.survey.num, species) %>% 
+  slice(rep(1:n(), each = 5)) %>% 
+  mutate(chicks = rep(seq(1, 5), length.out = n())) 
+
 brood.sizes <- brood.sizes.start  %>% 
   group_by(code, date, multiple.survey.num, species, chicks) %>%
   summarise(num.nests = n()) %>% 
-  select(code, date, multiple.survey.num, species, num.nests, brd = chicks) %>% 
+  select(code, date, multiple.survey.num, species, num.nests, brd = chicks)%>% 
+  full_join(., brd_filler %>% rename(brd = chicks)) %>% 
+  mutate(num.nests = ifelse(is.na(num.nests), 0, num.nests)) %>% 
   group_by(code, species) %>% 
   mutate(brd.size.date = ifelse(date == max(date), TRUE, NA),
          brd = as.character(brd)) %>% 
   left_join(stage5, by = c("code", "date", "species")) %>% 
   arrange(code, species, date) %>% 
-  filter(code %in% col_codes)
+  filter(code %in% col_codes) 
 
 
 # predators ----

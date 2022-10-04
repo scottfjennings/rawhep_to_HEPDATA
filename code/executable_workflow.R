@@ -151,7 +151,7 @@ source(here("code/step1_wrangle_HEP_site_visits.R"))
 # read data
 hep_site_visits <- hep_site_visits_from_access("C:/Users/scott.jennings/Documents/Projects/core_monitoring_research/HEP/HEP_screening_focal/HEP_site_visit_data.accdb")
 # specify which colonies to wrangle
-col_codes = c(53, 53.1, 999)
+col_codes = c(53, 53.1)
 # wrangle
 wrangled_site_visits <- wrangle_HEP_site_visits(hep_site_visits, col_codes = col_codes)
 # and save
@@ -310,11 +310,11 @@ render_season_summary(file = here("code/step2_wrangled_to_season_summary.Rmd"), 
 
 # Or all species for a single colony:
 pmap(.l = list(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = zyear, zcode = 53, zspp = c("GBHE"
-                                                                                                            #, "GREG"
+                                                                                                            , "GREG"
                                                                                                            #, "SNEG"
                                                                                                            #, "BCNH"
                                                                                                            #, "CAEG"
-                                                                                                           , "DCCO"
+                                                                                                           #, "DCCO"
                                                                                                            )), .f = render_season_summary)
 
 
@@ -333,11 +333,17 @@ pmap(.l = list(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear =
 ## Step 4, extract tables from screened Season Summary Sheets ----
 
 # first compare which sheets are in S drive vs local vs which data are in S123 to make sure all sheets have been created and screened
-full_join(list.files(paste("C:/Users/scott.jennings/Documents/Projects/core_monitoring_research/HEP/rawhep_to_HEPDATA/season_summary_forms/", zyear, sep = "")) %>%
+# THIS IS OPTIONAL AND MAY NOT BE NEEDED IF YOU'RE CONFIDENT ALL DATA HAVE BEEN SCREENED, OR YOU ARE INTENTIONALLY MOVING ON TO SUBSEQUENT STEPS WITHOUT ALL DATA SCREENED.
+# ALSO NOTE THIS CHUNK CURRENTLY DOES NOT REFER TO THE S DRIVE VERSION
+
+# need to fill in the right location
+s.rawhep_to_HEPDATA = 
+
+full_join(list.files(here(paste("season_summary_forms/", zyear, sep = ""))) %>%
                      data.frame() %>%
                      rename(file = 1) %>%
                      mutate(c.forms = TRUE),
-                   list.files(paste("C:/Users/scott.jennings/Documents/Projects/core_monitoring_research/HEP/rawhep_to_HEPDATA/season_summary_forms/", zyear, sep = "")) %>% 
+                   list.files(paste(s.rawhep_to_HEPDATA, "/rawhep_to_HEPDATA/season_summary_forms/", zyear, sep = "")) %>% 
                      data.frame() %>%
                      rename(file = 1) %>%
                      mutate(s.forms = TRUE)) %>% 

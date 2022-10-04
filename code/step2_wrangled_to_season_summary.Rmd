@@ -55,7 +55,7 @@ wrangled_raw <- readRDS(here(paste("data/wrangled/wrangled_raw", zyear, sep = "_
 
 # step 3: input the colony code and species you want to generate a season summary sheet for
 
-# zcode = 599
+# zcode = 53
 # zspp = "GREG"
 
 

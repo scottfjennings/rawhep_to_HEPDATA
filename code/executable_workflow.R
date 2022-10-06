@@ -149,6 +149,8 @@ wrangled_alcatraz %>%
 # load necessary functions
 source(here("code/step1_wrangle_HEP_site_visits.R"))
 # read data
+# this is a copy of the site_visit data copied to this directory. If you are working with access to the main version (i.e. S drive) then you can edit the path to point to that file
+# there is no risk of overwriting or changing that original file.
 hep_site_visits <- hep_site_visits_from_access("C:/Users/scott.jennings/Documents/Projects/core_monitoring_research/HEP/HEP_screening_focal/HEP_site_visit_data.accdb")
 # specify which colonies to wrangle
 col_codes = c(53, 53.1)
@@ -291,7 +293,7 @@ render_list <- pmap(.l = list(file = here("code/summary_for_observer.Rmd"), zyea
 colony_spp_need_sheet <- get_colony_spp_need_sheet(zyear, include.inactive = FALSE, include.already.made = FALSE) 
 
   # also add colony X species combos that were active within the last 3 years
-  recent_nesters <- readRDS(here("data/hep_annual_nest_abundance")) %>%
+  recent_nesters <- readRDS(here("data/support_data/hep_annual_nest_abundance")) %>%
               filter(year > zyear - 3, peakactvnsts > 0) %>% 
               distinct(code, species) %>% 
     right_join(., distinct(colony_spp_need_sheet, code))

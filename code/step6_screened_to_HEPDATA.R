@@ -39,10 +39,11 @@ effort <- screened_hep$observers.effort %>%
 
 # 10  PEAKACTVNSTS ----
 # this is all the colony X species combos that were really active
+# NOTE as of Feb 2023 PEAKACTVDATE is a new field for HEPDATA
 peakactvnsts.gr0 <- screened_hep$nests %>% 
   right_join(screened_sheets) %>%  
   filter(peak.active == 1) %>% 
-  select(CODE = code, SPECIES = species, PEAKACTVNSTS = total.nests)
+  select(CODE = code, SPECIES = species, PEAKACTVNSTS = total.nests, PEAKACTVDATE = date)
 
 # this is all the colony X species combos that were not actively nesting but for which the season summary sheet was screened.
 peakactvnsts.0 <- screened_hep$nests %>% 
@@ -52,7 +53,7 @@ peakactvnsts.0 <- screened_hep$nests %>%
   filter(peakactvnsts == 0) %>% 
   select(CODE = code, SPECIES = species, PEAKACTVNSTS = peakactvnsts)
 
-peakactvnsts_out <- rbind(peakactvnsts.gr0, peakactvnsts.0)
+peakactvnsts_out <- bind_rows(peakactvnsts.gr0, peakactvnsts.0)
 
 HEPDATA_out <- full_join(effort, peakactvnsts_out)
 # 11-13 (-16?) no longer collected, these added with NA at the end ----
@@ -168,7 +169,7 @@ disturbance <- screened_hep$disturbance %>%
   arrange(code, species, date) %>% 
   mutate(dist.num = row_number()) %>% 
   ungroup() %>% 
-  full_join(data.frame(dist.num = seq(1, 8)))
+  left_join(data.frame(dist.num = seq(1, 8)))
 
 disturbance_long <- disturbance %>% 
   select(code, species, date, type, result, dist.num) %>% 
@@ -215,7 +216,7 @@ HEPDATA_out <- full_join(HEPDATA_out, predators)
 # 98 Entry_Proofed
 # 99    Entered_By
 
-hepdata_names <- readRDS("data/HEPDATA_names") %>% 
+hepdata_names <- readRDS("data/support_data/HEPDATA_names") %>% 
               data.frame() %>% 
               rename(colname = 1) %>% 
               mutate(blah = NA) %>% 
@@ -274,11 +275,12 @@ HEPDATA_out <- HEPDATA_out %>%
          Entered_By = paste("code-generated record.", Sys.Date())) %>% 
   filter(!is.na(CODE)) %>% 
   bind_rows(., active_colony_non_nesters) %>%
-  left_join(., readRDS(here("data/HEP_site_names_nums_utm")) %>% 
+  left_join(., readRDS(here("data/support_data/HEP_site_names_nums_utm")) %>% 
               select(CODE = code, SITE = site.name)) %>%  
   mutate(YEAR = zyear) %>% 
   full_join(., hepdata_names) %>% 
-  select(names(hepdata_names)) %>% 
+  select(names(hepdata_names), PEAKACTVDATE) %>% 
+  relocate(PEAKACTVDATE, .after = PEAKACTVNSTS) %>% 
   filter(!is.na(CODE))
 
 HEPDATA_out <- HEPDATA_out %>% 
@@ -312,7 +314,7 @@ active_cols <- active_col_hepdata %>%
   
   
 
-
+# these are the inactive colony X species combos that did not have a summary sheet made or screened, so need to access the wrangled (unscreeened) version of the data.
 wrangled_hep <- readRDS(here(paste("data/wrangled/wrangled_raw_", zyear, sep = "")))
 wrangled_hep <- map(wrangled_hep, fix_alc_code)
 

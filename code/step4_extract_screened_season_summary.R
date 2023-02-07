@@ -12,17 +12,38 @@ library(docxtractr)
 
 
 
-# screening log ----
+#' get_screening_log
+#' 
+#' Extract the screening log (top table) from a .doc season summary sheet stored in season_summary_forms/YEAR/.
+#'
+#' @param zyear year of data you're processing
+#' @param zfile the .doc file name 
+#'
+#' @return data frame with the screening log
+#' @export
+#'
+#' @examples
+#' all_screening_log <- map2_df(zyear, seas_summ_files, get_screening_log)
 get_screening_log <- function(zyear, zfile) {
   doc <- read_docx(paste("season_summary_forms/", zyear, "/", zfile, sep = ""))
   extr_doc <- docx_extract_all_tbls(doc)
   screening_log <- extr_doc[[1]]
 }
 
-# all_screening_log <- map2_df(zyear, seas_summ_files, get_screening_log)
 
-# effort summary ----
 
+
+#' get_observers_effort
+#'
+#' Extract the effort summary (second table) from a .doc season summary sheet stored in season_summary_forms/YEAR/.
+#'
+#' @param zyear year of data you're processing
+#' @param zfile the .doc file name 
+#'
+#' @return data frame with the effort summary
+#'
+#' @examples
+#' all_effort_summary <- map2_df(zyear, seas_summ_files, get_effort_summary)
 get_observers_effort <- function(zyear, zfile) {
   doc <- read_docx(paste("season_summary_forms/", zyear, "/", zfile, sep = ""))
   extr_doc <- docx_extract_all_tbls(doc)
@@ -31,16 +52,26 @@ get_observers_effort <- function(zyear, zfile) {
     mutate(across(.cols = c(code, total.days, total.surveys, total.hours), as.numeric))
   }
 
-# all_effort_summary <- map2_df(zyear, seas_summ_files, get_effort_summary)
+# 
 
 
 # tables with date columns ----
 # first 2 and last 3 tables will always be the same, and they will always exist even if they don't contain data
-# middle n tables will have the by-date data, the first n/2 of these will have the total nest numbers, and the second n/2 will have nest stages
+# middle n tables will have the by-date data. n will always be a multiple of 2. the first n/2 of these will have the total nest numbers, and the second n/2 will have nest stages
 
 
 # helper function for date tables
-# fix date field
+
+#' monthday_to_date
+#' 
+#' Convert monthday back to date. Handles * indicating multiple survey number. Requires year to be loaded in global environment as zyear.
+#'
+#' @param zdf data frame with a monthday field 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 monthday_to_date <- function(zdf) {
   zdf <- zdf %>% 
     mutate(date = gsub("*", "", date)) %>% 
@@ -78,6 +109,7 @@ total_nests <- map(total_nest_tables, get_date_tables)  %>%
   mutate(code = as.numeric(code),
          total.nests = as.numeric(total.nests),
          peak.active = as.numeric(peak.active),
+         peak.active = as.logical(peak.active),
          complete.count = ifelse(str_sub(date, -1) == ".", "no", "yes"),
          obs.initials = ifelse(obs.initials == "", NA, obs.initials)) %>% 
   monthday_to_date() %>% 

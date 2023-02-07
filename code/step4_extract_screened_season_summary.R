@@ -89,7 +89,6 @@ monthday_to_date <- function(zdf) {
 
 get_total_nest_table <- function(zyear, zfile) {
   
-  
 get_date_tables <- function(table_num) {
   nest_tab_wide <- extr_doc[[table_num]]
 }
@@ -138,10 +137,11 @@ get_date_tables <- function(table_num) {
   doc <- read_docx(paste("season_summary_forms/", zyear, "/", zfile, sep = ""))
   extr_doc <- docx_extract_all_tbls(doc)
   
+num_total_nest_tables <- extr_doc[[length(extr_doc)]]$num_total_nest_tables %>% as.numeric()
 num_stage_tables <- extr_doc[[length(extr_doc)]]$num_nest_stage_tables %>% as.numeric()
 
   if(num_stage_tables > 0) {
-nest_stage_tables <- seq(3 + num_stage_tables, length.out = num_stage_tables)
+nest_stage_tables <- seq(3 + num_total_nest_tables, length.out = num_stage_tables)
 
 nest_stages_rop <- map(nest_stage_tables, get_date_tables)  %>%
              reduce(full_join) %>% 
@@ -155,9 +155,11 @@ stages <- full_join(nest_stages_rop %>%
                       filter(variable == "which.rop") %>% 
                       rename(which.rop = value) %>% 
                       select(-variable), by = c("code", "species", "date", "multiple.survey.num")) %>% 
-  mutate(stage = gsub("stage.", "", stage),
-         which.rop = tolower(which.rop))%>% 
-    mutate(across(.cols = c(code, num.nests), as.numeric))
+  mutate(across(.cols = c(code, num.nests), as.numeric),
+         stage = gsub("stage.", "", stage),
+         which.rop = tolower(which.rop),
+         num.nests = replace_na(num.nests, 0))
+
 }
 }
 

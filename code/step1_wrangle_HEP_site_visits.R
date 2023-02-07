@@ -168,8 +168,9 @@ stages1 <- hep_site_visits$back %>%
   select(-SheetNum)
 
 col_date_spp_stage <- stages1 %>% 
-  distinct(code, date, species) %>% 
-  expand(date, code, species, stage = seq(1:5))
+  distinct(code, species) %>% 
+  expand(code, species, stage = seq(1:5)) %>% 
+  full_join(distinct(stages1, code, date, species))
 
 stages <- stages1 %>% 
   full_join(col_date_spp_stage)%>% 

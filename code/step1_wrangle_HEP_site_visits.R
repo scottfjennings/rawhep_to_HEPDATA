@@ -155,7 +155,6 @@ nests <- full_join(nests_start, peak_active) %>%
 # "species"
 # "num.nests"
 # "stage"
-# "complete.count"
 # "which.rop"
 
 stages <- hep_site_visits$back %>% 
@@ -165,12 +164,12 @@ stages <- hep_site_visits$back %>%
   ungroup() %>% 
   rename(species = SpeciesCode, stage = Stage) %>% 
   left_join(., front1_wrangled %>% select(date, code, obs.initial = ObsInitial, SheetNum)) %>% 
-  left_join(., dates %>% select(code, date, multiple.survey.num, complete.count)) %>% 
+  left_join(., dates %>% select(code, date, multiple.survey.num)) %>% 
   filter(year(date) == zyear) %>% 
   full_join(., dates %>% 
               mutate(date = ymd(date)) %>%
               assign_rop(rop_dates = read.csv("data/support_data/rop_dates.csv"), zyear)) %>% 
-  select(code, date, multiple.survey.num, species, num.nests, stage, complete.count, which.rop) %>% 
+  select(code, date, multiple.survey.num, species, num.nests, stage, which.rop) %>% 
   mutate(which.rop = replace_na(which.rop, "other"),
          stage = as.character(stage)) %>% 
   filter(code %in% col_codes)

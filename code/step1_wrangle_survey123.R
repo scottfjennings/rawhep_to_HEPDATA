@@ -294,7 +294,7 @@ total_nests <- full_join(bird_total_nests, peak_active, by = c("code", "date", "
 bird_stages <- birds %>% 
   filter(variable == "stage") %>% 
   select(code, date, multiple.survey.num, species, num.nests = value, stage = znum) %>% 
-  full_join(., select(which_rop, -contains("diff")), by = c("code", "date", "multiple.survey.num")) %>% 
+  full_join(., select(which_rop, -contains("diff"), -complete.count), by = c("code", "date", "multiple.survey.num")) %>% 
   mutate(which.rop = ifelse(is.na(which.rop), "other", which.rop))
 
 which_rop <- bird_stages %>% 

@@ -68,6 +68,7 @@ dates = front1_wrangled %>%
   add_multiple_survey_num() %>% 
   mutate(complete.count = "yes")
 
+
 # then observers.effort ----
 # "code"
 # "colony"
@@ -118,11 +119,11 @@ observers.effort = front1_wrangled %>%
 # some dates have total nests entered in the front 2 sheet, others just have the individual-nest data on the back. need to compare and take whichever is greater 
 front_nests <- hep_site_visits$front2 %>% 
   select(species = SpeciesCode, total.nests.front = Active, SheetNum) %>% 
-  right_join(., front1_wrangled %>% select(date, SheetNum, obs.initials = ObsInitial, code))
+  right_join(., front1_wrangled %>% select(date, SheetNum, obs.initials = ObsInitial, code)) # right_join here filters to just zyear
 
 back_nests <- hep_site_visits$back %>% 
   select(species = SpeciesCode, Status, SheetNum) %>% 
-  right_join(., front1_wrangled %>% select(SheetNum, obs.initials = ObsInitial, date, code)) %>% 
+  right_join(., front1_wrangled %>% select(SheetNum, obs.initials = ObsInitial, date, code)) %>% # right_join here filters to just zyear 
   filter(Status == "A") %>% 
   group_by(code, date, species, SheetNum) %>% 
   summarise(total.nests.back = n()) %>% 
@@ -157,22 +158,36 @@ nests <- full_join(nests_start, peak_active) %>%
 # "stage"
 # "which.rop"
 
-stages <- hep_site_visits$back %>% 
-  filter(Status == "A", between(Stage, 1, 5)) %>% 
+col_date_spp_stage <- distinct(nests, code, date, species) %>% 
+  left_join(expand(dates, date, code, stage = seq(1:5)))
+
+col_date_spp_stage <- stages1 %>% 
+  distinct(code, date, species) %>% 
+  expand(date, code, species, stage = seq(1:5))
+
+stages1 <- hep_site_visits$back %>% 
+  filter(Status == "A", between(Stage, 1, 5), grepl(zyear, SheetNum)) %>% 
   group_by(SheetNum, SpeciesCode, Stage) %>% 
   summarise(num.nests = n()) %>% 
   ungroup() %>% 
   rename(species = SpeciesCode, stage = Stage) %>% 
-  left_join(., front1_wrangled %>% select(date, code, obs.initial = ObsInitial, SheetNum)) %>% 
-  left_join(., dates %>% select(code, date, multiple.survey.num)) %>% 
+  left_join(., front1_wrangled %>% select(date, code, SheetNum)) %>% 
+  select(-SheetNum)
+
+stages <- stages1 %>% 
+  full_join(col_date_spp_stage)%>% 
+  arrange(code, date, species, stage) %>% 
+  mutate(num.nests = replace_na(num.nests, 0)) %>% 
+  left_join(., dates %>% select(code, date, multiple.survey.num)) %>%
   filter(year(date) == zyear) %>% 
-  full_join(., dates %>% 
+  left_join(., dates %>% 
               mutate(date = ymd(date)) %>%
-              assign_rop(rop_dates = read.csv("data/support_data/rop_dates.csv"), zyear)) %>% 
+              assign_rop(rop_dates, zyear)) %>% 
   select(code, date, multiple.survey.num, species, num.nests, stage, which.rop) %>% 
   mutate(which.rop = replace_na(which.rop, "other"),
          stage = as.character(stage)) %>% 
-  filter(code %in% col_codes)
+  filter(code %in% col_codes) %>% 
+  arrange(code, date, species, stage) 
 
 # brood.sizes ----
 # "code"

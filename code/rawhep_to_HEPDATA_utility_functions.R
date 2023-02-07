@@ -120,7 +120,18 @@ return(nesting_history)
 #  view()
 #}
 
-# make list of colony X species combos that still need a Season Summary Sheet made ----
+#' get_colony_spp_need_sheet
+#' 
+#' make list of colony X species combos that still need a Season Summary Sheet made
+#' 
+#' @param zyear 
+#' @param include.inactive 
+#' @param include.already.made 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 get_colony_spp_need_sheet <- function(zyear, include.inactive = TRUE, include.already.made = FALSE) {
 colony_spp <- readRDS(paste("data/wrangled/wrangled_s123", zyear, sep = "_"))$nests 
 
@@ -220,8 +231,17 @@ out_names <- gsub("eagle_sp", "eagle species", out_names)
 
 
 
-# generate list of season summary sheets that have been screened
 
+#' get_screened_col_spp
+#'
+#' generate list of season summary sheets that have been screened
+#' 
+#' @param zyear 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 get_screened_col_spp <- function(zyear) {
 screened_col_spp <- readRDS(here(paste("data/screened/screened_hep_", zyear, sep = "")))$screen.log %>%
   mutate(screened = ifelse(screener.1 != "not screened", TRUE, FALSE)) %>% 

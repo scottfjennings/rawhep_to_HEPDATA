@@ -158,13 +158,6 @@ nests <- full_join(nests_start, peak_active) %>%
 # "stage"
 # "which.rop"
 
-col_date_spp_stage <- distinct(nests, code, date, species) %>% 
-  left_join(expand(dates, date, code, stage = seq(1:5)))
-
-col_date_spp_stage <- stages1 %>% 
-  distinct(code, date, species) %>% 
-  expand(date, code, species, stage = seq(1:5))
-
 stages1 <- hep_site_visits$back %>% 
   filter(Status == "A", between(Stage, 1, 5), grepl(zyear, SheetNum)) %>% 
   group_by(SheetNum, SpeciesCode, Stage) %>% 
@@ -173,6 +166,10 @@ stages1 <- hep_site_visits$back %>%
   rename(species = SpeciesCode, stage = Stage) %>% 
   left_join(., front1_wrangled %>% select(date, code, SheetNum)) %>% 
   select(-SheetNum)
+
+col_date_spp_stage <- stages1 %>% 
+  distinct(code, date, species) %>% 
+  expand(date, code, species, stage = seq(1:5))
 
 stages <- stages1 %>% 
   full_join(col_date_spp_stage)%>% 

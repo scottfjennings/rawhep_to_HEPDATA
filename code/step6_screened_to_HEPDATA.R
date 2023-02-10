@@ -10,19 +10,15 @@ library(RODBC)
 
 screened_to_HEPDATA <- function(zyear) {
   
-  
-   
 screened_sheets <- get_screened_col_spp(zyear) %>% 
     fix_alc_code() %>% 
     #select(-screened) %>% 
     mutate(code = as.numeric(code))
   
-  
 screened_hep <- readRDS(here(paste("data/screened/screened_hep_", zyear, sep = "")))
 
 # 70.888 back to 70 for alcatraz colony code
 screened_hep <- map(screened_hep, fix_alc_code)
-
 
 surveyed_colonies  <- get_surveyed(zyear) %>% 
   fix_alc_code()
@@ -213,7 +209,7 @@ disturbance <- screened_hep$disturbance %>%
 
 non_nesters_disturbance <- disturbance %>% 
   filter(copy.to.non.nesters == "yes") %>% 
-  select(-SPECIES) %>% 
+  select(-SPECIES, -result) %>% 
   left_join(surveyed_colonies_all_spp)
 
 disturbance_long <- disturbance %>% 

@@ -243,7 +243,7 @@ get_notes <- function(zyear, zfile) {
     mutate(code = as.numeric(code),
            multiple.survey.num = ifelse(multiple.survey.num == "" | is.na(multiple.survey.num), 1, multiple.survey.num),
            multiple.survey.num = as.numeric(multiple.survey.num)) %>% 
-    filter(date != "" | note.type == "for.HEPDATA")
+    filter(notes != "")
   }
 
 # all_notes <- map2_df(zyear, seas_summ_files, get_notes) %>% distinct() # should be duplicated for each species, distinct will remove dups

@@ -1,15 +1,14 @@
 
 
-# data checking functions ----
-
-#' Check observer X date X colony combinations for unexpected observers ----
+# data checking functions 
 
 
-# uses tracking sheet - requires that to be accurate
-# This function finds date X colony instances in Survey123 data where the ONLY observer is not expected based on the tracking sheet. For each [date X colony X observer name] combo in Survey123, check the observer name against the list of observers assigned to that site (from the HEP tracking sheet: https://egretorg-my.sharepoint.com/:x:/g/personal/emiko_condeso_egret_org/EbSWdIJ1wLdHhDV1EI1k50sBOPg0sU_UP9BNFVIcicBijg?rtime=wV3D_o772Eg); can't read tracking sheet directly from www, so need to copy to csv first. Also requires wrangled Survey123 file be saved. Stops with message if either file doesn't exist. Function reads both files so neither need to be in environment.
-
-#' Title
-#'
+#' check_expected_observers
+#' 
+#' Check observer X date X colony combinations for unexpected observers. uses tracking sheet - requires that to be accurate
+#' 
+#' This function finds date X colony instances in Survey123 data where the ONLY observer is not expected based on the tracking sheet. For each [date X colony X observer name] combo in Survey123, check the observer name against the list of observers assigned to that site (from the HEP tracking sheet: https://egretorg-my.sharepoint.com/:x:/g/personal/emiko_condeso_egret_org/EbSWdIJ1wLdHhDV1EI1k50sBOPg0sU_UP9BNFVIcicBijg?rtime=wV3D_o772Eg); can't read tracking sheet directly from www, so need to copy to csv first. Also requires wrangled Survey123 file be saved. Stops with message if either file doesn't exist. Function reads both files so neither need to be in environment.
+#' 
 #' @param zyear 
 #'
 #' @return
@@ -52,7 +51,7 @@ check_observers_sites <- readRDS(here(paste("data/wrangled/wrangled_s123", zyear
   mutate(only.unexpected.observer = sum(expected.observer) < 1)
 }
 
-#' Check nesting history
+#' check_nesting_history
 #'
 #' Check which species have nested in one or more colonies.
 #'
@@ -71,6 +70,7 @@ check_observers_sites <- readRDS(here(paste("data/wrangled/wrangled_s123", zyear
 #' nesting_history <- check_nesting_history(2020, 53, screened.s123 = FALSE)
 #' # multiple colonies but not all
 #' nesting_history <- check_nesting_history(2020, c(53, 53.1), screened.s123 = FALSE)
+#' 
 check_nesting_history <- function(zyear, zcode = NA, screened.s123 = FALSE) {
   
 
@@ -83,10 +83,10 @@ check_nesting_history <- function(zyear, zcode = NA, screened.s123 = FALSE) {
   
   nesting_history <- s123$nests %>%
     filter(peak.active == TRUE) %>% 
-    left_join(., readRDS(here("data/HEP_site_names_nums_utm")) %>% select(code, site.name)) %>% 
+    left_join(., readRDS(here("data/support_data/HEP_site_names_nums_utm")) %>% select(code, site.name)) %>% 
     distinct(code, site.name, species, total.nests) %>% 
     mutate(year = zyear) %>% 
-    rbind(., readRDS(here("data/hep_annual_nest_abundance")) %>%
+    rbind(., readRDS(here("data/support_data/hep_annual_nest_abundance")) %>%
             rename(total.nests = peakactvnsts)) %>% 
     arrange(code, year, species)
     
@@ -120,49 +120,61 @@ return(nesting_history)
 #  view()
 #}
 
-#' get_colony_spp_need_sheet
+
+
+#' get_surveyed_inactive
 #' 
-#' make list of colony X species combos that still need a Season Summary Sheet made
-#' 
+#' get codes for all colonies surveyed in zyear that had 0 nests on every visit (i.e. all surveyed inactive colonies) 
+#'
 #' @param zyear 
-#' @param include.inactive 
-#' @param include.already.made 
 #'
 #' @return
 #' @export
 #'
 #' @examples
-get_colony_spp_need_sheet <- function(zyear, include.inactive = TRUE, include.already.made = FALSE) {
-colony_spp <- readRDS(paste("data/wrangled/wrangled_s123", zyear, sep = "_"))$nests 
-
-if(include.inactive == FALSE) {
-  colony_spp <- colony_spp %>% 
-    filter(total.nests > 0) 
-}
- colony_spp <- colony_spp %>% 
-   distinct(code, species) %>% 
-  mutate(year = zyear) %>% 
-  arrange(code, species)
-
-# remove colony X species that already have sheet made
-if(include.already.made == FALSE & length(list.files(paste("season_summary_forms/", zyear, "/", sep = ""))) > 0) {
-colony_spp_need_sheet <- colony_spp %>% 
-  anti_join(., list.files(paste("season_summary_forms/", zyear, "/", sep = "")) %>% 
-              data.frame() %>% 
-              rename(file.name = 1) %>% 
-              mutate(file.name = gsub(".docx", "", file.name)) %>%
-              separate(file.name, into = c("code", "year", "species", "screened"), sep = "_") %>% 
-              mutate(across(c(code, year), as.numeric))) 
-} else {
-  colony_spp_need_sheet <- colony_spp
-}
-
-return(colony_spp_need_sheet)
+#' surveyed_inactive <- get_surveyed_inactive(zyear)
+get_surveyed_inactive <- function(zyear) {
+  surveyed_inactive <- readRDS(paste("data/wrangled/wrangled_raw", zyear, sep = "_"))$nests %>% 
+    group_by(code) %>% 
+    mutate(tot.nests = sum(total.nests)) %>% 
+    ungroup() %>% 
+    filter(tot.nests < 1) %>% 
+    ungroup() %>% 
+    distinct(code)
 }
 
 
-# function to output season summary sheet for a given year, colony and species ----
-# files must be .docx. .doc will not work without downloading LibreOffice software
+#' get_surveyed
+#' 
+#' get codes for all colonies surveyed in zyear 
+#'
+#' @param zyear 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+#' surveyed <- get_surveyed(zyear)
+get_surveyed <- function(zyear) {
+  surveyed <- readRDS(paste("data/wrangled/wrangled_raw", zyear, sep = "_"))$observers.effort %>% 
+    distinct(code) 
+}
+
+
+
+#' render_season_summary
+#' 
+#' function to output season summary sheet for a given year, colony and species. files must be .docx. .doc will not work without downloading LibreOffice software
+#' 
+#' @param file 
+#' @param zyear 
+#' @param zcode 
+#' @param zspp 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 render_season_summary <- function(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear, zcode, zspp) {
   rmarkdown::render(file, params = list(
     zyear = zyear,
@@ -175,8 +187,20 @@ render_season_summary <- function(file = here("code/step2_wrangled_to_season_sum
 
 
 
-# function to output season summary sheet for a given year, colony and species ----
-# files must be .docx. .doc will not work without downloading LibreOffice software
+
+#' render_summary_for_observer
+#' 
+#' function to output observer summary sheet for a given year, colony and species. files must be .docx. .doc will not work without downloading LibreOffice software
+#'
+#' @param file 
+#' @param zyear 
+#' @param zcode 
+#' @param zcol.name 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 render_summary_for_observer <- function(file = here("code/summary_for_observer.Rmd"), zyear, zcode, zcol.name) {
   zcode.sub = gsub("\\.", "_", zcode)
   rmarkdown::render(file, params = list(
@@ -189,7 +213,17 @@ render_summary_for_observer <- function(file = here("code/summary_for_observer.R
 
 
 
-# disturbance codes ----
+
+#' disturbance_code_to_text
+#' 
+#' Convert disturbance type codes to text
+#'
+#' @param dist.code.field 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 disturbance_code_to_text <- function(dist.code.field) {
 dist.code.field = toupper(dist.code.field)
   dist.code.field = case_when(dist.code.field == "A" ~ "Avian",
@@ -203,6 +237,16 @@ dist.code.field = toupper(dist.code.field)
 }
 
 
+#' disturbance_response_to_text
+#' 
+#' Convert disturbance response codes to text
+#'
+#' @param dist.response.field 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 disturbance_response_to_text <- function(dist.response.field) {
   dist.response.field = case_when(dist.response.field == 0 ~ "none", 
                                   dist.response.field == 1 ~ "behavioral response", 
@@ -213,7 +257,17 @@ return(dist.response.field)
   }
 
 
-# get terrestrial predators
+
+#' get_terrestrial_predators
+#' 
+#' Extract terrestrial predators from predator list
+#'
+#' @param x 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 get_terrestrial_predators <- function(x) {
   
   
@@ -401,8 +455,7 @@ monthday_completecount <- function(df) {
 
 
 
-# add helper columns to indicate if multiple surveys were done at the same colony on the same day ----
-#' Identify multiple surveys done on the same day
+#' add_multiple_survey_num
 #' 
 #' Identify and number multiple surveys done at the same colony on the same day
 #'
@@ -422,7 +475,8 @@ df <- df %>%
 
 
 
-# determine which ROP each survey date belongs to
+#' assign_rop
+#' 
 #' Assign HEP survey dates to the nearest ROP for that year
 #'
 #' @param df data frame with at least a date, code, multiple.survey.num and complete.count fields

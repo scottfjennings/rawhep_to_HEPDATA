@@ -38,11 +38,12 @@ source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/ma
 
 # specify which year you are working with
 zyear = 2022
-
+# read in file with ROP dates
+rop_dates = read.csv("data/support_data/rop_dates.csv")
 
 # OPTIONAL: view list of HEP sites and codes
-source("https://raw.githubusercontent.com/scottfjennings/HEP_data_work/master/HEP_code/HEP_utility_functions.R")
-#obs_list <- hep_sites_from_access(here("C:/Users/scott.jennings/Documents/Projects/core_monitoring_research/HEP/HEP_data_work/HEP_data/HEPDATA.accdb")) %>% view()
+# source("https://raw.githubusercontent.com/scottfjennings/HEP_data_work/master/HEP_code/HEP_utility_functions.R")
+#obs_list <- hep_sites_from_access(here("C:/Users/scott.jennings/Documents/Projects/core_monitoring_research/HEP/HEP_data_work/HEP_data/HEPDATA.accdb"))
 
 
 
@@ -56,7 +57,7 @@ source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/ma
 # source(here("code/step1_wrangle_survey123.R"))
 
 # set downloaded survey123 version
-zversion = "0"
+zversion = "099"
  
 # This step fixes field names and date fields, adds a helper column to indicate where multiple surveys happened on the same date, then finally splits the data into different "types" (e.g. total nest numbers, predator observations, etc.). These groups of "like" data are referred to as data groups. Each data group requires different procedures and manipulations downstream in the workflow.
 
@@ -87,7 +88,7 @@ wrangled_s123 %>% saveRDS(paste("data/wrangled/wrangled_s123", zyear, sep = "_")
 source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step1_wrangle_alcatraz.R")
 # source(here("code/step1_wrangle_alcatraz.R"))
 
-all_checks_usgs <- read.xlsx(here("data/alcatraz/70_Alcatraz_2021databackupSNG,BCNH.xlsx"), sheetIndex = "Visits", startRow = 3)
+all_checks_usgs <- read.xlsx(here("data/alcatraz/Alcatraz2022data.xlsx"), sheetIndex = "Visits", startRow = 3)
 
 # Alcatraz step 2. basic initial cleaning and reshaping 
 long_alcatraz <- pivot_alcatraz(all_checks_usgs)
@@ -106,6 +107,11 @@ distinct(long_alcatraz, notes) %>% view()
 # Remove from 2021 a "passerine" nest that was monitored for fun.
 long_alcatraz <- long_alcatraz %>% 
   filter(species != "PASS")
+
+
+# Remove from 2022 a AMCR nest that was monitored for fun.
+long_alcatraz <- long_alcatraz %>% 
+  filter(species != "AMCR")
 
 # Alcatraz step 4. extract info from notes 
 all_checks_extracted <- notes_extracter(long_alcatraz)
@@ -130,7 +136,12 @@ check_notes_frequency(all_checks_extracted)
 
 # and now filter to have just the keepers
 # and remove renests
-# !! each year double check this is how renests were indicated  all_checks_extracted <- all_checks_extracted %>% filter(keeper == "Y") %>% select(-keeper) %>% filter(!grepl("A", nest), !grepl("B", nest))
+# reneststs are indicated with "A" after the nest number for the 2nd attempt, "B" for the 3rd attempt, ...
+# we want to remove these renest attempts so our data only contains known first attempts
+# !! each year double check this is how renests were indicated - look for nest numbers with letters:
+# distinct(all_checks_extracted, nest) %>% filter(grepl("[a-z]", nest, ignore.case = TRUE)) %>% view()
+
+# all_checks_extracted <- all_checks_extracted %>% filter(keeper == "Y") %>% select(-keeper) %>% filter(!grepl("A", nest), !grepl("B", nest))
 
 
 # Alcatrax step 6. assign nest stage 
@@ -141,13 +152,14 @@ alcatraz_checks_stages <- alcatraz_assign_stage(all_checks_extracted)
 wrangled_alcatraz <- wrangle_alcatraz(alcatraz_checks_stages)
 
 wrangled_alcatraz %>% 
-  saveRDS(here("data/wrangled/wrangled_alcatraz_2021"))
+  saveRDS(here(paste("data/wrangled/wrangled_alcatraz_", zyear, sep = "")))
 
 # end of 1.b Alcatraz
 
 ### 1.c HEP_site_visits ----
 # load necessary functions
-source(here("code/step1_wrangle_HEP_site_visits.R"))
+source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step1_wrangle_HEP_site_visits.R")
+# source(here("code/step1_wrangle_HEP_site_visits.R"))
 # read data
 # this is a copy of the site_visit data copied to this directory. If you are working with access to the main version (i.e. S drive) then you can edit the path to point to that file
 # there is no risk of overwriting or changing that original file.
@@ -156,6 +168,7 @@ hep_site_visits <- hep_site_visits_from_access("C:/Users/scott.jennings/Document
 col_codes = c(53, 53.1)
 # wrangle
 wrangled_site_visits <- wrangle_HEP_site_visits(hep_site_visits, col_codes = col_codes)
+
 # and save
 saveRDS(wrangled_site_visits, paste("data/wrangled/wrangled_site_visits", zyear, sep = "_"))
 
@@ -172,13 +185,22 @@ source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/ma
 # you can comment out the lines for un-wrangled data
 # note, be sure to check
 combine_wrangled_hep = combine_wrangled_hep(wrangled_s123 = readRDS(here(paste("data/wrangled/wrangled_s123", zyear, sep = "_")))
-                                            #, wrangled_alcatraz = readRDS(here(paste("data/wrangled/wrangled_alcatraz", zyear, sep = "_")))
+                                            , wrangled_alcatraz = readRDS(here(paste("data/wrangled/wrangled_alcatraz", zyear, sep = "_")))
                                             , wrangled_site_visits = readRDS(here(paste("data/wrangled/wrangled_site_visits", zyear, sep = "_")))
                                             )
 
 combine_wrangled_hep %>% saveRDS(paste("data/wrangled/wrangled_raw", zyear, sep = "_"))
 
-# combine_wrangled_hep <- readRDS(paste("data/wrangled/wrangled_raw", zyear, sep = "_"))
+# wrangled_hep <- readRDS(paste("data/wrangled/wrangled_raw", zyear, sep = "_"))
+
+combine_wrangled_hep$disturbance %>% 
+  filter(!is.na(date)) %>% 
+  mutate(multiple.survey.num = as.numeric(multiple.survey.num)) %>% 
+  select(-species) %>% 
+  distinct() %>% 
+  left_join(combine_wrangled_hep$nests %>% group_by(code) %>% summarise(tot.nests = sum(total.nests))) %>% 
+  filter(result == 4 & tot.nests == 0) %>% 
+  left_join(obs_list %>% select(code, site.name)) %>% view()
 
 # end of step 1
 
@@ -277,41 +299,53 @@ obs_list <- colony_vol_obs  %>%
 
 # obs_list <- obs_list %>% filter(code %in% c(160, 160.1, 181, 183, 184, 186))
 
-pmap(.l = list(file = here("code/summary_for_observer.Rmd"), zyear = zyear, zcode = 171, zcol.name = "BrooksIslandSpit"), .f = render_summary_for_observer)
+pmap(.l = list(file = here("code/render_observer_summary.Rmd"), zyear = zyear, zcode = 171, zcol.name = "BrooksIslandSpit"), .f = render_summary_for_observer)
 
-render_list <- pmap(.l = list(file = here("code/summary_for_observer.Rmd"), zyear = obs_list$year, zcode = obs_list$code, zcol.name = obs_list$colony), .f = safely(render_summary_for_observer))
+render_list <- pmap(.l = list(file = here("code/render_observer_summary.Rmd"), zyear = obs_list$year, zcode = obs_list$code, zcol.name = obs_list$colony), .f = safely(render_summary_for_observer))
 
 
  
 ## Step 2, output Season Summary sheets. ----
 # output wrangled Survey123 data into Season Summary sheets.
+
+source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step2_wrangled_to_season_summary.R")
+# source(here("code/step2_wrangled_to_season_summary.R"))
+
+
 # We want to create a sheet for each instance where a species nested in a colony. 
 
 # The function get_colony_spp_need_sheet() queries wrangled_s123 to get a list of all species in each colony this year, and queries the year-appropriate season_summary_forms folder to create a list of colony X species that still need a Season Summary Sheet created. Rendering Season Summary Sheets to .docx files is the most time-consuming process of this workflow, so it is beneficial to only render each sheet once.
 
 
-colony_spp_need_sheet <- get_colony_spp_need_sheet(zyear, include.inactive = FALSE, include.already.made = FALSE) 
+colony_spp_need_sheet <- get_colony_spp_need_sheet(zyear, include.already.made = FALSE) 
 
-  # also add colony X species combos that were active within the last 3 years
-  recent_nesters <- readRDS(here("data/support_data/hep_annual_nest_abundance")) %>%
-              filter(year > zyear - 3, peakactvnsts > 0) %>% 
-              distinct(code, species) %>% 
-    right_join(., distinct(colony_spp_need_sheet, code))
-  
-colony_spp_need_sheet <- full_join(colony_spp_need_sheet, recent_nesters) %>% 
+inactive_colony_need_sheet <- get_inactive_colony_need_sheet(zyear, include.already.made = TRUE)
+
+need_sheet <- full_join(colony_spp_need_sheet, inactive_colony_need_sheet) %>% 
   filter(!is.na(species)) %>% 
   mutate(year = zyear)
 
+more_sheets <- filter(screened_col_spp, is.na(species)) %>% 
+  mutate(year = zyear,
+         species = "GREG")
+
+
 # The colony_spp_need_sheet object has the colony and species fields for purrr::map to iterate over to create each sheet.
-safely(pmap(.l = list(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = colony_spp_need_sheet$year, zcode = colony_spp_need_sheet$code, zspp = colony_spp_need_sheet$species), .f = render_season_summary))
+safely(pmap(.l = list(file = here("code/render_season_summary.Rmd"), zyear = colony_spp_need_sheet$year, zcode = colony_spp_need_sheet$code, zspp = colony_spp_need_sheet$species), .f = render_season_summary))
+safely(pmap(.l = list(file = here("code/render_season_summary.Rmd"), zyear = inactive_colony_need_sheet$year, zcode = inactive_colony_need_sheet$code, zspp = inactive_colony_need_sheet$species), .f = render_season_summary))
+
+
+safely(pmap(.l = list(file = here("code/render_season_summary.Rmd"), zyear = zyear, zcode = c(1.1, 65, 141), zspp = "GREG"), .f = render_season_summary))
+
+render_season_summary(file = here("code/render_season_summary.Rmd"), zyear = zyear, zcode = c(1.1, 65, 141), zspp = "GREG")
 
 
 # Note: you can generate a Season Summary Sheet for a single species X colony instance by specifying species and colony in the call to render_season_summary:
-render_season_summary(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = zyear, zcode = 128, zspp = "GBHE")
+render_season_summary(file = here("code/render_season_summary.Rmd"), zyear = zyear, zcode = 15, zspp = "DCCO")
 
 
 # Or all species for a single colony:
-pmap(.l = list(file = here("code/step2_wrangled_to_season_summary.Rmd"), zyear = zyear, zcode = 53, zspp = c("GBHE"
+pmap(.l = list(file = here("code/render_season_summary.Rmd"), zyear = zyear, zcode = 53, zspp = c("GBHE"
                                                                                                             , "GREG"
                                                                                                            #, "SNEG"
                                                                                                            #, "BCNH"
@@ -360,11 +394,12 @@ full_join(list.files(here(paste("season_summary_forms/", zyear, sep = ""))) %>%
 # This step uses functions in extract_screened_season_summary.R
 
 source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step4_extract_screened_season_summary.R")
+# source(here("code/step4_extract_screened_season_summary.R"))
 
   
 # Create a list of Season Summary Sheets that have been screened (requires file renaming in step 3).
 
-  screened_seas_summ_files <- list.files(paste("season_summary_forms/", zyear, "/", sep = ""), pattern = "doc")
+  screened_seas_summ_files <- list.files(paste("season_summary_forms/", zyear, "/", sep = ""), pattern = "screened.doc")
 # if you have one of the season summary sheets in this directory open, you will not get the right file name for that sheet and creating screened_hep below will fail
 
 
@@ -416,22 +451,22 @@ track_changes_hep <- list(screen.log = readRDS(here(paste("data/screened/screene
                            observers.effort = make_track_change_tables(zyear, "observers.effort"),
                            nests = make_track_change_date_tables(zyear, "nests") %>% 
                              mutate(date = as.Date(date)) %>% 
-                             arrange(code, species, date),
+                             arrange(code, species, date, changelog),
                            stages = make_track_change_date_tables(zyear, "stages") %>% 
                              mutate(date = as.Date(date)) %>% 
-                             arrange(code, species, date),
+                             arrange(code, species, date, changelog),
                            brood.sizes = make_track_change_date_tables(zyear, "brood.sizes") %>% 
                              mutate(date = as.Date(date)) %>% 
-                             arrange(code, species, date),
+                             arrange(code, species, date, changelog),
                            predators = make_track_change_tables(zyear, "predators") %>% 
                              arrange(code, species, predator.species),
                            disturbance = make_track_change_date_tables(zyear, "disturbance") %>% 
                              mutate(date = as.Date(date)) %>% 
-                             arrange(code, species, date),
+                             arrange(code, species, date, changelog),
                            notes = make_track_change_date_tables(zyear, "notes") %>% 
                              mutate(date = ifelse(date == "", NA, date),
                                     date = as.Date(date)) %>% 
-                             arrange(code, species, date)
+                             arrange(code, species, date, changelog)
 )
 
 
@@ -458,20 +493,30 @@ track_changes_hep$nests %>%
 # NOTE no actual data fields should have changed during screening, just the fields indicating which record should carry forward to HEPDATA, so be sure to scan the data fields to make sure they didn't change accidentally 
 
 track_changes_hep$nests %>% 
+  filter(!is.na(screened)) %>% 
   filter(grepl("changed", changelog)) %>% 
   left_join(track_changes_hep$screen.log %>% mutate(code = as.numeric(code))) %>% 
+  arrange(code, species, date, changelog) %>% 
   view()
 
+# changes to the stages table should only be in ROP assignment, thus probably don't need to view records for each stage. Here just view distinct records for each colony, species, survey 
 track_changes_hep$stages %>% 
-  filter(grepl("changed", changelog)) %>% 
-  arrange(code, species, date, stage) %>% 
-  left_join(track_changes_hep$screen.log %>% mutate(code = as.numeric(code))) %>%
+  filter(grepl("changed", changelog), species != "DCCO") %>% 
+  left_join(track_changes_hep$screen.log %>% mutate(code = as.numeric(code))) %>% 
+  select(-num.nests, -stage) %>% 
+  group_by(code, species, date, multiple.survey.num) %>% 
+  distinct() %>% 
+  arrange(code, species, date, changelog)  %>%
   view()
 
+# changes to the brood sizes table should only be in brood size date assignment, thus probably don't need to view records for each brd. Here just view distinct records for each colony, species, survey 
 track_changes_hep$brood.sizes %>% 
   filter(grepl("changed", changelog)) %>% 
-  arrange(code, species, date, brd) %>% 
-  left_join(track_changes_hep$screen.log %>% mutate(code = as.numeric(code))) %>%
+  left_join(track_changes_hep$screen.log %>% mutate(code = as.numeric(code)))  %>% 
+  select(-num.nests, -brd) %>% 
+  group_by(code, species, date, multiple.survey.num) %>% 
+  distinct() %>% 
+  arrange(code, species, date, changelog)  %>%
   view()
 
 # Save to disk
@@ -501,6 +546,8 @@ track_changes_hep$notes <- track_changes_hep$notes %>%
 
 saveRDS(track_changes_hep, here(paste("data/track_changes/track_changes_hep_", zyear, sep = ""))) 
 
+track_changes_hep <- readRDS(here(paste("data/track_changes/track_changes_hep_", zyear, sep = ""))) 
+
 
   
   
@@ -508,19 +555,25 @@ saveRDS(track_changes_hep, here(paste("data/track_changes/track_changes_hep_", z
 
 # HEPDATA is a "wide" data structure, and has field names in ALLCAPS. Thus this step comprises a bunch of reshaping and renaming. 
 
+  # check if any colonies were surveyed but have not had there season summary sheet scanned (check for screened = NA)
+  # Note colonies 1.1, 65, and 141 were apparently never active (according to HEPDATA), so they will show up as screened = NA but can be ignored.
+  screened_col_spp <- get_screened_col_spp(zyear) %>% 
+    full_join(get_surveyed(zyear) %>% mutate(code = as.character(code)))
 
 source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step6_screened_to_HEPDATA.R")
 # source(here("code/step6_screened_to_HEPDATA.R"))
 
-HEPDATA_active <- screened_to_HEPDATA_active_colonies(zyear) %>% 
+HEPDATA <- screened_to_HEPDATA(zyear) %>% 
   arrange(CODE, SPECIES)
 
 
-HEPDATA_inactive <- screened_to_HEPDATA_inactive_colonies(zyear, HEPDATA_active) %>% 
-  arrange(CODE, SPECIES)
 
-HEPDATA <- bind_rows(HEPDATA_active, HEPDATA_inactive) %>% 
-  distinct()
+#HEPDATA_active <- screened_to_HEPDATA_active_colonies(zyear) %>% arrange(CODE, SPECIES)
+
+
+# HEPDATA_inactive <- screened_to_HEPDATA_inactive_colonies(zyear, HEPDATA_active) %>% arrange(CODE, SPECIES)
+
+# HEPDATA <- bind_rows(HEPDATA_active, HEPDATA_inactive) %>% distinct()
 
 #zz <- full_join(HEPDATA_active %>% select(CODE, SPECIES) %>% mutate(active = TRUE),
 #                HEPDATA_inactive %>% select(CODE, SPECIES) %>% mutate(inactive = TRUE))
@@ -528,6 +581,7 @@ HEPDATA <- bind_rows(HEPDATA_active, HEPDATA_inactive) %>%
 
 # there should be 6 records for each colony
 count(HEPDATA, CODE) %>% arrange(-n) %>% view()
+# and 1 for each species
 count(HEPDATA, CODE, SPECIES) %>% arrange(-n) %>% view()
 
 str(HEPDATA)
@@ -536,6 +590,12 @@ str(HEPDATA)
 HEPDATA <- HEPDATA %>% 
   mutate(PEAKACTVNSTS = ifelse((CODE == 70.0 & SPECIES %in% c("BCNH", "SNEG")), NA, PEAKACTVNSTS),
          NOTES = ifelse((CODE == 70.0 & SPECIES %in% c("BCNH", "SNEG")), "No BCNH or SNEG survey by USGS due to COVID", NOTES))
+
+
+# fill in DATAID
+HEPDATA <- HEPDATA %>% 
+  arrange(CODE, SPECIES) %>% 
+  mutate(DATAID = paste(zyear, sprintf("%03.0f", 1:nrow(HEPDATA)), sep = ""))
 
 
 
@@ -547,4 +607,18 @@ write.csv(HEPDATA, here(paste("data/as_HEPDATA/HEPDATA_", zyear, ".csv", sep = "
 
 # HEPDATA2020 <- readRDS(here(paste("data/as_HEPDATA/HEPDATA_", zyear, sep = "")))
 
+# Export observer list
+# need to merge the contacts db and the current year's observer list
+cgp_contacts <- CGP_contacts_from_access("C:/Users/scott.jennings/Documents/Projects/core_monitoring_research/Contacts/CGRC_Contacts.accdb") %>% 
+  select(CONTACTID, LAST_NAME, FIRST_NAME)
 
+observers <- get_observers_from_screened(zyear) %>% 
+  separate(observer, c("FIRST_NAME", "LAST_NAME"), sep = " ", remove = FALSE)
+
+out_observers <- cgp_contacts %>% 
+  right_join(observers) %>% 
+  select(CONTACTID, observer, LAST_NAME, FIRST_NAME, CODE = code, everything()) %>% 
+  arrange(observer) %>% 
+  left_join(HEPDATA %>% distinct(CODE, DATAID))
+
+write.csv(out_observers, here(paste("data/as_HEPDATA/HEP_observers_", zyear, ".csv", sep = "")), row.names = FALSE)

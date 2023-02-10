@@ -146,7 +146,7 @@ get_surveyed_inactive <- function(zyear) {
 
 #' get_surveyed
 #' 
-#' get codes for all colonies surveyed in zyear 
+#' get codes for all colonies surveyed in zyear
 #'
 #' @param zyear 
 #'

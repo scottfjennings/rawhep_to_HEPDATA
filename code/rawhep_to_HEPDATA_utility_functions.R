@@ -201,7 +201,7 @@ render_season_summary <- function(file = here("code/step2_wrangled_to_season_sum
 #' @export
 #'
 #' @examples
-render_summary_for_observer <- function(file = here("code/summary_for_observer.Rmd"), zyear, zcode, zcol.name) {
+render_summary_for_observer <- function(file = here("code/observer_observer_summary.Rmd"), zyear, zcode, zcol.name) {
   zcode.sub = gsub("\\.", "_", zcode)
   rmarkdown::render(file, params = list(
     zyear = zyear,

@@ -36,12 +36,12 @@ options(scipen = 999)
 
 ```{r}
 # input the year you are working with and read in the wrangled Survey123 data
-# zyear = 2021
+# zyear = 2022
 wrangled_s123 <- readRDS(here(paste("data/wrangled/wrangled_s123", zyear, sep = "_")))
 
-# input the colony code and species you want to generate a season summary sheet for
+# input the colony code and species you want to generate an observer summary sheet for
 
-# zcode = 47.1
+# zcode = 146.1
 
 observers <- read.csv(here("data/HEP_tracking_copy/observers.csv")) %>% 
   filter(SITE.CODE == zcode, year == zyear) %>% 
@@ -49,7 +49,7 @@ observers <- read.csv(here("data/HEP_tracking_copy/observers.csv")) %>%
 
 
 
-site_name = readRDS(here("data/HEP_site_names_nums_utm")) %>% 
+site_name = readRDS(here("data/support_data/HEP_site_names_nums_utm")) %>% 
   filter(code == zcode) %>% 
   select(site.name, code)
 
@@ -148,7 +148,7 @@ core.spp.nesting <- (filter(zyear_nesters, species %in% c("GREG", "GBHE")) %>% d
 nspp.core <- length(core.spp.nesting)
 
 
-historic_nesters <- readRDS(here("data/hep_annual_nest_abundance")) %>% 
+historic_nesters <- readRDS(here("data/support_data/hep_annual_nest_abundance")) %>% 
   filter(code == zcode, peakactvnsts > 0) %>% 
   distinct(species) 
 
@@ -333,7 +333,7 @@ nest_totals$sub_table5  %>% shared_nest_total_table()
 How does `r zyear` compare with previous years? Below is a plot of this year's peak nest abundance along with the historic nest abundance.    
 
 ```{r fig.width=8, fig.height=zfig.height}
-historic_nest_abund <- readRDS(here("data/hep_annual_nest_abundance")) %>% 
+historic_nest_abund <- readRDS(here("data/support_data/hep_annual_nest_abundance")) %>% 
   filter(code == zcode, peakactvnsts >= 0) %>% 
   ungroup() %>% 
   select(year, species, peakactvnsts) 
@@ -372,12 +372,18 @@ historic_nest_abund4plot <- expand.grid(species = distinct(historic_nest_abund, 
 #  return(x_out)
 #}
 
+if(max(historic_nest_abund$year, na.rm = TRUE) - min(historic_nest_abund$year, na.rm = TRUE) > 5) {
+  zyears <- seq((floor(min(historic_nest_abund$year, na.rm = TRUE)/5)*5), (ceiling(zyear/5)*5), by = 5)
+} else {
+  zyears <- seq(min(historic_nest_abund$year, na.rm = TRUE), max(historic_nest_abund$year, na.rm = TRUE))
+}
 
 historic_nest_abund4plot %>%  
   ggplot()  +
   geom_col(aes(x = year, y = peakactvnsts), color = "black") +
-  scale_x_continuous(labels = seq((floor(min(historic_nest_abund$year, na.rm = TRUE)/5)*5), (ceiling(zyear/5)*5), by = 5), 
-                     breaks = seq((floor(min(historic_nest_abund$year, na.rm = TRUE)/5)*5), (ceiling(zyear/5)*5), by = 5)) +
+  xlim(min(zyears), max(zyears)) +
+  scale_x_continuous(labels = zyears, 
+                     breaks = zyears) +
   #geom_text(data = filter(historic_nest_abund4plot, is.na(peakactvnsts)), aes(x = year, y = lab.na, label = "X")) +
   labs(y = "Total number of nests",
        x = "",
@@ -567,7 +573,7 @@ if(any(spp.nesting %in% c("GREG", "GBHE"))) {
   
 ```{r fig.width=8, fig.height=zfig.height.core}
 if(length(core.spp.nesting) > 0) {
-historic_phenology <- readRDS(here("data/hep_annual_phenology")) %>% 
+historic_phenology <- readRDS(here("data/support_data/hep_annual_phenology")) %>% 
   filter(code == zcode, species %in% historic_nesters$species & species %in% c("GBHE", "GREG"), !is.na(year)) %>% 
   ungroup() 
 
@@ -589,6 +595,12 @@ hist.mean = historic_phenology %>%
   group_by(species) %>% 
   summarise(hist.mean = mean(phen.prop.unguarded, na.rm = TRUE))
 
+if(max(historic_phenology4plot$year) - min(historic_phenology4plot$year) > 5) {
+  zyears <- seq((floor(min(historic_phenology4plot$year, na.rm = TRUE)/5)*5), (ceiling(historic_phenology4plot$zyear/5)*5), by = 5)
+} else {
+  zyears <- seq(min(historic_phenology4plot$year), max(historic_phenology4plot$year))
+}
+
 historic_phenology %>%  
   full_join(hist.mean) %>% 
   ggplot() + 
@@ -597,8 +609,8 @@ historic_phenology %>%
   geom_col(aes(x = year, y = phen.prop.unguarded), color = "black") +
   geom_hline(aes(yintercept = hist.mean)) +
   geom_text(data = filter(historic_phenology4plot, is.na(phen.prop.unguarded)), aes(x = year, y = lab.na), label = "X") +
-  scale_x_continuous(labels = seq((floor(min(historic_nest_abund$year, na.rm = TRUE)/5)*5), (ceiling(zyear/5)*5), by = 5), 
-                     breaks = seq((floor(min(historic_nest_abund$year, na.rm = TRUE)/5)*5), (ceiling(zyear/5)*5), by = 5)) +
+  scale_x_continuous(labels = zyears, 
+                     breaks = zyears) +
   labs(y = "Proportion of nests unguarded",
        x = "",
        title = "Intraseasonal timing (horizontal line is long term average; X = no data)",
@@ -758,7 +770,7 @@ if(any(spp.nesting %in% c("GREG", "GBHE"))) {
 
 ```{r fig.width=8, fig.height=zfig.height.core}
 if(length(core.spp.nesting) > 0) {
-historic_productivity <- readRDS(here("data/hep_annual_new_productivity")) %>% 
+historic_productivity <- readRDS(here("data/support_data/hep_annual_new_productivity")) %>% 
   filter(code == zcode, species %in% historic_nesters_core_spp$species, !is.na(year)) %>% 
   ungroup() 
 
@@ -775,6 +787,11 @@ historic_productivity4plot <- expand.grid(species = historic_nesters_core_spp$sp
   ungroup() %>% 
   mutate(species = translate_bird_names(species, "alpha.code", "common.name"))
 
+if(max(historic_productivity4plot$year) - min(historic_productivity4plot$year) > 5) {
+  zyears <- seq((floor(min(historic_productivity4plot$year, na.rm = TRUE)/5)*5), (ceiling(historic_productivity4plot$zyear/5)*5), by = 5)
+} else {
+  zyears <- seq(min(historic_productivity4plot$year), max((historic_productivity4plot$year)))
+}
 
 historic_productivity4plot %>%  
   ggplot() + 
@@ -782,8 +799,8 @@ historic_productivity4plot %>%
   geom_errorbar(aes(x = year, ymax = mean.chx.per.nest + st.err.chx.per.nest, ymin = mean.chx.per.nest - st.err.chx.per.nest))  +
   geom_col(aes(x = year, y = mean.chx.per.nest), color = "black") + 
   geom_text(data = filter(historic_productivity4plot, is.na(mean.chx.per.nest)), aes(x = year, y = lab.na), label = "X") +
-  scale_x_continuous(labels = seq((floor(min(historic_nest_abund$year, na.rm = TRUE)/5)*5), (ceiling(zyear/5)*5), by = 5), 
-                     breaks = seq((floor(min(historic_nest_abund$year, na.rm = TRUE)/5)*5), (ceiling(zyear/5)*5), by = 5)) +
+  scale_x_continuous(labels = zyears, 
+                     breaks = zyears) +
   labs(y = "Average pre-fledging brood size",
        x = "",
        title = "Mean Stage 4 Brood Size (X = no data)") +

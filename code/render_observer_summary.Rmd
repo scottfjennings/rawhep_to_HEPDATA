@@ -28,7 +28,10 @@ library(knitr)
 library(birdnames)
 
 source("https://raw.githubusercontent.com/scottfjennings/rawhep_to_HEPDATA/main/code/append_species_not_nesting.R")
-source("https://raw.githubusercontent.com/scottfjennings/rawhep_to_HEPDATA/main/code/rawhep_to_HEPDATA_utility_functions.R")
+# source(here("code/append_species_not_nesting.R"))
+ source("https://raw.githubusercontent.com/scottfjennings/rawhep_to_HEPDATA/main/code/rawhep_to_HEPDATA_utility_functions.R")
+# source(here("code/rawhep_to_HEPDATA_utility_functions.R"))
+
 options(scipen = 999)
 
 
@@ -41,7 +44,7 @@ wrangled_s123 <- readRDS(here(paste("data/wrangled/wrangled_s123", zyear, sep = 
 
 # input the colony code and species you want to generate an observer summary sheet for
 
-# zcode = 146.1
+# zcode = 146
 
 observers <- read.csv(here("data/HEP_tracking_copy/observers.csv")) %>% 
   filter(SITE.CODE == zcode, year == zyear) %>% 
@@ -596,7 +599,7 @@ hist.mean = historic_phenology %>%
   summarise(hist.mean = mean(phen.prop.unguarded, na.rm = TRUE))
 
 if(max(historic_phenology4plot$year) - min(historic_phenology4plot$year) > 5) {
-  zyears <- seq((floor(min(historic_phenology4plot$year, na.rm = TRUE)/5)*5), (ceiling(historic_phenology4plot$zyear/5)*5), by = 5)
+  zyears <- seq((floor(min(historic_phenology4plot$year, na.rm = TRUE)/5)*5), (ceiling(max(historic_phenology4plot$year, na.rm = TRUE)/5)*5), by = 5)
 } else {
   zyears <- seq(min(historic_phenology4plot$year), max(historic_phenology4plot$year))
 }
@@ -788,7 +791,7 @@ historic_productivity4plot <- expand.grid(species = historic_nesters_core_spp$sp
   mutate(species = translate_bird_names(species, "alpha.code", "common.name"))
 
 if(max(historic_productivity4plot$year) - min(historic_productivity4plot$year) > 5) {
-  zyears <- seq((floor(min(historic_productivity4plot$year, na.rm = TRUE)/5)*5), (ceiling(historic_productivity4plot$zyear/5)*5), by = 5)
+  zyears <- seq((floor(min(historic_productivity4plot$year, na.rm = TRUE)/5)*5), (ceiling(max(historic_productivity4plot$year, na.rm = TRUE)/5)*5), by = 5)
 } else {
   zyears <- seq(min(historic_productivity4plot$year), max((historic_productivity4plot$year)))
 }

@@ -38,6 +38,7 @@ source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/ma
 
 # specify which year you are working with
 zyear = 2022
+
 # read in file with ROP dates
 rop_dates = read.csv("data/support_data/rop_dates.csv")
 
@@ -270,6 +271,16 @@ check_expected_observers(zyear) %>% # from survey123_utility_functions.R
 ## Step 1.2. Observer summaries ----
 # At this point the summaries for observers can be generated if desired
 
+# The HEP_tracking sheet is the only place where coordinator status is stored.
+# reading in that file takes a relatively long time, so don't want to do it when rendering each sheet
+# rather, save just he observer info, and render_observer_summary.RMD will read that smaller file
+read.xlsx(here("data/HEP_tracking_copy/HEP Tracking Spreadsheet2_shared.xlsx"), sheetName = as.character(zyear)) %>%
+  select(SITE.CODE, SITE.NAME, LAST.NAME, FIRST.NAME, Coordinator.) %>% 
+  mutate(observer.name = paste(FIRST.NAME, LAST.NAME),
+         year = zyear) %>% 
+  write.csv(here(paste("data/HEP_tracking_copy/observers_", zyear, ".csv", sep = "")), row.names = FALSE)
+# YOU SHOULD ONLY NEED TO DO THIS ONCE PER YEAR, UNLESS OBSERVER INFO CHANGES
+
 # Generate a list of colonies that had a volunteer observer and at least 1 species nesting.
 # need to resplit the list of observers
 colony_vol_obs <- readRDS(paste("data/wrangled/wrangled_s123", zyear, sep = "_"))$observers.effort %>% 
@@ -299,7 +310,7 @@ obs_list <- colony_vol_obs  %>%
 
 # obs_list <- obs_list %>% filter(code %in% c(160, 160.1, 181, 183, 184, 186))
 
-pmap(.l = list(file = here("code/render_observer_summary.Rmd"), zyear = zyear, zcode = 171, zcol.name = "BrooksIslandSpit"), .f = render_summary_for_observer)
+pmap(.l = list(file = here("code/render_observer_summary.Rmd"), zyear = zyear, zcode = 146, zcol.name = "WillotaDr"), .f = render_summary_for_observer)
 
 render_list <- pmap(.l = list(file = here("code/render_observer_summary.Rmd"), zyear = obs_list$year, zcode = obs_list$code, zcol.name = obs_list$colony), .f = safely(render_summary_for_observer))
 

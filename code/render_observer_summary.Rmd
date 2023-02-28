@@ -26,6 +26,7 @@ library(officer)
 library(here)
 library(knitr)
 library(birdnames)
+library(xlsx)
 
 source("https://raw.githubusercontent.com/scottfjennings/rawhep_to_HEPDATA/main/code/append_species_not_nesting.R")
 # source(here("code/append_species_not_nesting.R"))
@@ -40,15 +41,14 @@ options(scipen = 999)
 ```{r}
 # input the year you are working with and read in the wrangled Survey123 data
 # zyear = 2022
-wrangled_s123 <- readRDS(here(paste("data/wrangled/wrangled_s123", zyear, sep = "_")))
+screened <- readRDS(here(paste("data/screened/screened_hep", zyear, sep = "_")))
 
 # input the colony code and species you want to generate an observer summary sheet for
 
 # zcode = 146
 
-observers <- read.csv(here("data/HEP_tracking_copy/observers.csv")) %>% 
-  filter(SITE.CODE == zcode, year == zyear) %>% 
-  mutate(observer.name = paste(FIRST.NAME, LAST.NAME))
+observers <- read.csv(here(paste("data/HEP_tracking_copy/observers_", zyear, ".csv", sep = ""))) %>% 
+  filter(SITE.CODE == zcode)
 
 
 
@@ -77,9 +77,11 @@ Below is a summary of heron and egret nest monitoring data from `r site_name$sit
 ```{r}
 # make text listing volunteers and summary of effort 
 
-seas_summary_observers <- wrangled_s123$observers %>% 
+seas_summary_observers <- screened$observers %>% 
   filter(code == zcode) %>% 
-  mutate(observers = gsub("\\*", "", observers))
+  mutate(observers = gsub("\\*", "", observers)) %>% 
+  select(-species) %>% 
+  distinct()
 
 
 out_length <- length(str_split(seas_summary_observers$observers,"\\;")[[1]])
@@ -102,12 +104,12 @@ observers_text <- paste(obs_list$observer.name, collapse = " and ")
 observers_text <- gsub("and\\,", "and", observers_text)
 
 if(nrow(obs_list) > 1 & any(obs_list$Coordinator. == "yes", na.rm = TRUE)) {
-  observers_text <- paste(obs_text, "monitored the", distinct(seas_summary_observers, colony), "colony, and", filter(obs_list, Coordinator. == "yes")$observer.name, "was the site coordinator. These observers")
+  observers_text <- paste(observers_text, "monitored the", distinct(seas_summary_observers, colony), "colony, and", filter(obs_list, Coordinator. == "yes")$observer.name, "was the site coordinator. These observers")
 }
 
 
 if(nrow(obs_list) > 1 & any(obs_list$Coordinator. != "yes", na.rm = TRUE)) {
-  observers_text <- paste(obs_text, "monitored the", distinct(seas_summary_observers, colony), "colony. These observers")
+  observers_text <- paste(observers_text, "monitored the", distinct(seas_summary_observers, colony), "colony. These observers")
 }
 
 
@@ -116,9 +118,9 @@ if(nrow(obs_list) == 1) {
 }
 
 
-total.surveys <- wrangled_s123$dates %>% 
+total.surveys <- screened$observers.effort %>% 
   filter(code == zcode) %>% 
-  nrow()
+  distinct(total.surveys)
 if(total.surveys == 1) {
   total.surveys <- paste(total.surveys, "site visit")
 }  else {
@@ -136,7 +138,7 @@ In `r zyear`, `r observers_text` made `r total.surveys` to the colony for a tota
 ```{r}
 
 # total nests  
-zyear_nesters <- wrangled_s123$nests %>% 
+zyear_nesters <- screened$nests %>% 
   filter(code == zcode) %>% 
   group_by(species) %>% 
   mutate(tot.nests = sum(total.nests)) %>%
@@ -205,7 +207,7 @@ zfig.height.core = ifelse(nrow(historic_nesters_core_spp) > 1, 10.6, 5.3)
 if(nspp > 0) {
 
 
-curr_year_peakactvnsts <- wrangled_s123$nests %>% 
+curr_year_peakactvnsts <- screened$nests %>% 
   filter(code == zcode, species %in% spp.nesting, peak.active == TRUE) %>% 
   select(species, code, date, total.nests, complete.count) %>% 
   group_by(species) %>% 
@@ -344,7 +346,7 @@ historic_nest_abund <- readRDS(here("data/support_data/hep_annual_nest_abundance
 if(nrow(historic_nest_abund) > 0) {
 historic_nest_abund <- historic_nest_abund %>% 
   bind_rows(curr_year_peakactvnsts %>% select(year, species, peakactvnsts, complete.count)) %>% 
-  bind_rows(wrangled_s123$nests %>% 
+  bind_rows(screened$nests %>% 
               filter(code == zcode, (!species %in% spp.nesting & species %in% historic_nesters$species)) %>% 
               distinct(species, total.nests) %>% 
               mutate(year = zyear) %>% 
@@ -412,7 +414,7 @@ historic_nest_abund4plot %>%
 if(nspp > 0) { # if there were species nesting in the colony
 if(any(spp.nesting %in% c("GREG", "GBHE"))) { # and if those species were GREG or GBHE:
   # reshape stage data to present in the summary
-nest_stages_df <- wrangled_s123$stages %>% 
+nest_stages_df <- screened$stages %>% 
   filter(code == zcode, species %in% core.spp.nesting) %>% 
   mutate(stage = paste("stage", stage, sep = ".")) %>% 
   arrange(date) %>% 
@@ -425,7 +427,7 @@ nest_stages_df <- wrangled_s123$stages %>%
   mutate(species = ifelse(stage == 1, translate_bird_names(species, "alpha.code", "common.name"), "")) %>% 
   rename(Species = species)
 # check for stage data during the appropriate ROPs
-phen_stages <- wrangled_s123$stages %>% 
+phen_stages <- screened$stages %>% 
   mutate(phen.rop = case_when(species == "GBHE" & which.rop == "rop.4" ~ TRUE,
                               species == "GREG" & which.rop == "rop.5" ~ TRUE)) %>% 
   filter(code == zcode, species %in% core.spp.nesting, phen.rop == TRUE) %>% 
@@ -641,19 +643,20 @@ if(any(spp.nesting %in% c("GREG", "GBHE"))) {
 # stage 4 brood sizes
 if(nspp > 0) { # if there were >= 1 nest observed:
   if(any(spp.nesting %in% c("GREG", "GBHE"))) { # and if GREG or GBHE were nesting:
- brood_sizes <- wrangled_s123$brood.sizes %>% 
-  filter(code == zcode, species %in% core.spp.nesting) %>% 
-   group_by(species, date, multiple.survey.num) %>% 
-   mutate(tot.nests = sum(num.nests),
-          brd.size.date = ifelse(is.na(brd.size.date), FALSE, brd.size.date)) %>% 
-   ungroup() %>% 
-   filter(tot.nests > 0)
+ brood_sizes <- screened$brood.sizes %>% 
+  filter(code == zcode, species %in% core.spp.nesting) #%>% 
+   #group_by(species, date, multiple.survey.num) %>% 
+   #mutate(tot.nests = sum(num.nests),
+  #        brd.size.date = ifelse(is.na(brd.size.date), FALSE, brd.size.date)) %>% 
+  # ungroup() %>% 
+  # filter(tot.nests > 0)
     if(nrow(brood_sizes) > 0 & any(brood_sizes$brd.size.date == TRUE)) { # and if there is brood size data:
       # pivot wider for display in summary
 brood_sizes_wide <- brood_sizes %>% 
   arrange(species, date, multiple.survey.num, brd) %>% 
   mutate(brd = paste("brd.", brd, sep = ""),
          year = zyear,
+         stage5.nests = as.logical(stage5.nests),
          stage5.nests = replace_na(stage5.nests, FALSE)) %>% 
   #select(-multiple.survey.num) %>% 
   pivot_wider(id_cols = c(species, date, multiple.survey.num, stage5.nests), values_from = num.nests, names_from = brd) %>% 
@@ -665,7 +668,7 @@ brood_sizes_wide <- brood_sizes %>%
          date = paste(paste(month(date), day(date), sep = "-"), multiple.survey.num, sep = "")) %>%
   select(species, date, everything(), -multiple.survey.num)
 # use it to calculate productivity
-zyear_productivity <- wrangled_s123$brood.sizes %>% 
+zyear_productivity <- screened$brood.sizes %>% 
   filter(code == zcode, species %in% core.spp.nesting, brd.size.date == TRUE) %>%
   mutate(brd = paste("brd", brd, sep = "")) %>% 
   pivot_wider(id_cols = c(code, species, date, multiple.survey.num), names_from = brd, values_from = num.nests) %>% 
@@ -829,13 +832,14 @@ The observers also collected information on disturbance to the colony, including
 
 ```{r}
 # disturbance
-disturbance <- wrangled_s123$disturbance %>% 
+disturbance <- screened$disturbance %>% 
   filter(code == zcode) %>% 
   mutate(type = disturbance_code_to_text(type),
          result = disturbance_response_to_text(result)) %>% 
   distinct(date, type, description, result) %>% 
   select(date, type, description, result) %>% 
-  select(Date = date, Type = type, Description = description, Result = result)
+  select(Date = date, Type = type, Description = description, Result = result) %>% 
+  filter(!is.na(Date))
 
 ```
 
@@ -856,13 +860,14 @@ flextable(disturbance) %>%
 
 ```{r}
 # predators
-predators <- wrangled_s123$predators %>% 
+predators <- screened$predators %>% 
   filter(code == zcode) %>% 
   distinct(code, predator.species, nesting, present) %>% 
   mutate(across(c(nesting, present), ~ifelse(. == 1, "Yes", "No")),
          across(c(nesting, present), ~ifelse(is.na(.), "No", .)),
          predator.species = translate_bird_names(predator.species, "alpha.code", "common.name")) %>% 
-  select(-code)
+  select(-code) %>% 
+  filter(!is.na(predator.species))
 
 ```
 <br> 

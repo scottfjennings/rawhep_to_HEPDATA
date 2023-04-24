@@ -1,0 +1,188 @@
+---
+title: "Bolinas Lagoon nesting update"
+author: "CGRC Staff - Scott Jennings"
+date: "`r Sys.Date()`"
+output: word_document
+params:
+  zyear: 2021
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, 
+                      message = FALSE, 
+                      warning = FALSE,
+                      ft.align = "left")
+
+
+```
+
+
+```{r}
+
+library(tidyverse)
+library(lubridate)
+library(flextable)
+library(officer)
+library(here)
+library(knitr)
+library(birdnames)
+
+source("https://raw.githubusercontent.com/scottfjennings/rawhep_to_HEPDATA/main/code/append_species_not_nesting.R")
+# source(here("code/append_species_not_nesting.R"))
+ source("https://raw.githubusercontent.com/scottfjennings/rawhep_to_HEPDATA/main/code/rawhep_to_HEPDATA_utility_functions.R")
+# source(here("code/rawhep_to_HEPDATA_utility_functions.R"))
+
+options(scipen = 999)
+
+
+```
+
+```{r}
+# input the year you are working with and read in the wrangled Survey123 data
+
+ zyear = 2023
+
+source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/step1_wrangle_HEP_site_visits.R")
+# source(here("code/step1_wrangle_HEP_site_visits.R"))
+# read data
+# this is a copy of the site_visit data copied to this directory. If you are working with access to the main version (i.e. S drive) then you can edit the path to point to that file
+# there is no risk of overwriting or changing that original file.
+hep_site_visits <- hep_site_visits_from_access("C:/Users/scott.jennings/OneDrive - Audubon Canyon Ranch/Projects/core_monitoring_research/HEP/HEP_data_work/HEP_data/HEP_site_visit_data.accdb")
+
+
+
+#hep_site_visits <- hep_site_visits_from_access("V:/HEP_data/HEPDATA.accdb") # this is the path for Azure via remote desktop
+
+
+# specify which colonies to wrangle
+col_codes = c(53, 53.1, 1)
+
+sites <- readRDS(here("data/support_data/HEP_site_names_nums_utm"))
+
+```
+
+
+
+```{r}
+
+front1_wrangled = hep_site_visits$front1 %>% 
+  filter(year(Date) == zyear, CODE %in% col_codes) %>% 
+  rename("date" = Date, "code" = CODE, "start" = StartTime, "end" = EndTime) %>% 
+  mutate(across(c(start, end), ~as.POSIXct(paste(date, paste(hour(.), minute(.), second(.), sep = ":"))))) %>% 
+  left_join(sites)
+  
+# some dates have total nests entered in the front 2 sheet, others just have the individual-nest data on the back. need to compare and take whichever is greater 
+front_nests <- hep_site_visits$front2 %>% 
+  select(species = SpeciesCode, total.nests.front = Active, SheetNum) %>% 
+  right_join(., front1_wrangled %>% select(date, SheetNum, obs.initials = ObsInitial, code, site.name)) # right_join here filters to just zyear
+
+back_nests <- hep_site_visits$back %>% 
+  select(species = SpeciesCode, Status, SheetNum) %>% 
+  right_join(., front1_wrangled %>% select(SheetNum, obs.initials = ObsInitial, date, code, site.name)) %>% # right_join here filters to just zyear 
+  filter(Status == "A") %>% 
+  group_by(code, date, species, SheetNum) %>% 
+  summarise(total.nests.back = n()) %>% 
+  ungroup()
+
+nests_start <- full_join(front_nests, back_nests) %>% 
+  mutate(across(contains("nests"), ~replace_na(., 0)),
+         total.nests = ifelse(total.nests.back < total.nests.front, total.nests.front, total.nests.back)) %>% 
+  select(code, site.name, date, species, total.nests) %>% 
+  filter(!is.na(species)) %>% 
+  mutate(date = as.Date(date),
+         species.name = translate_bird_names(species, "alpha.code", "common.name"),
+         species.name = factor(species.name, levels = c("Great Egret", "Great Blue Heron", "Double-crested Cormorant")))
+
+
+most_recent_nests <- nests_start %>% 
+  group_by(species.name) %>% 
+  filter(date == max(date)) %>% 
+  ungroup() %>% 
+  mutate(nests.out = paste(total.nests, species.name)) %>%
+  group_by(site.name) %>% 
+  summarise(nests.out.text = paste(nests.out, collapse = ", "),
+            date = max(date),
+            site.name = max(site.name)) %>% 
+  mutate(nests.out.text = paste("On the most recent visit, ", month(date, label = TRUE, abbr = TRUE), " ", day(date), ", there were ", nests.out.text, " nests at the ", site.name, " Colony.", sep = ""))
+
+```
+
+`r most_recent_nests$nests.out.text`
+
+```{r}
+
+ggplot(nests_start) +
+  geom_col(aes(x = date, y = total.nests, fill = species.name), stat="identity", width=1, position = "dodge") +
+  scale_fill_brewer(palette = "Set1") +
+    scale_x_date(breaks = as.Date(distinct(nests_start, date)$date), date_labels = "%b %d") +
+  theme_bw() +
+  labs(y = "Total nests",
+       x = "",
+       fill = "")
+
+
+```
+
+How does `r zyear` compare with previous years? Below is a plot of the historic nest abundance for all colonies on Bolinas Lagoon.    
+
+```{r fig.width=8}
+historic_nest_abund <- readRDS(here("data/support_data/hep_annual_nest_abundance")) %>% 
+  filter(code %in% col_codes, peakactvnsts >= 0) %>% 
+  ungroup() %>% 
+  select(code, year, species, peakactvnsts) %>% 
+  left_join(sites %>% select(code, site.name)) %>% 
+  group_by(site.name, species) %>% 
+  filter(max(peakactvnsts) > 0) %>% 
+  ungroup() %>% 
+  mutate(species.name = translate_bird_names(species, "alpha.code", "common.name"),
+         species.name = factor(species.name, levels = c("Great Egret", "Great Blue Heron", "Snowy Egret", "Double-crested Cormorant")))
+
+
+
+  zyears <- seq((floor(min(historic_nest_abund$year, na.rm = TRUE)/5)*5), (ceiling(zyear/5)*5), by = 5)
+
+historic_nest_abund %>%  
+  ggplot()  +
+  geom_line(aes(x = year, y = peakactvnsts, color = site.name)) +
+  geom_point(aes(x = year, y = peakactvnsts, color = site.name)) +
+  xlim(min(zyears), max(zyears)) +
+  scale_x_continuous(labels = zyears, 
+                     breaks = zyears) +
+  scale_color_brewer(palette = "Dark2") +
+  labs(y = "Total number of nests",
+       x = "",
+       color = "") +
+  facet_wrap(~species.name, scales = "free_y") + 
+  theme_bw()
+
+```
+
+
+
+
+```{r}
+# nest stages
+
+stages1 <- hep_site_visits$back %>% 
+  filter(Status == "A", between(Stage, 1, 5), grepl(zyear, SheetNum)) %>% 
+  group_by(SheetNum, SpeciesCode, Stage) %>% 
+  summarise(num.nests = n()) %>% 
+  ungroup() %>% 
+  rename(species = SpeciesCode, stage = Stage) %>% 
+  left_join(., front1_wrangled %>% select(date, code, SheetNum)) %>% 
+  select(-SheetNum)
+
+col_date_spp_stage <- stages1 %>% 
+  distinct(code, species) %>% 
+  expand(code, species, stage = seq(1:5)) %>% 
+  full_join(distinct(stages1, code, date, species))
+
+stages <- stages1 %>% 
+  full_join(col_date_spp_stage) %>% 
+  arrange(code, date, species, stage) %>% 
+  mutate(num.nests = replace_na(num.nests, 0))
+
+
+
+```
+

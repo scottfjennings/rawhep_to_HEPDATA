@@ -167,7 +167,7 @@ source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/ma
 # read data
 # this is a copy of the site_visit data copied to this directory. If you are working with access to the main version (i.e. S drive) then you can edit the path to point to that file
 # there is no risk of overwriting or changing that original file.
-hep_site_visits <- hep_site_visits_from_access("C:/Users/scott.jennings/Documents/Projects/core_monitoring_research/HEP/HEP_screening_focal/HEP_site_visit_data.accdb")
+hep_site_visits <- hep_site_visits_from_access("C:/Users/scott.jennings/OneDrive - Audubon Canyon Ranch/Projects/core_monitoring_research/HEP/HEP_screening_focal/HEP_site_visit_data.accdb")
 # specify which colonies to wrangle
 col_codes = c(53, 53.1)
 # wrangle
@@ -642,6 +642,10 @@ write.csv(out_observers, here(paste("data/as_HEPDATA/HEP_observers_", zyear, ".c
 # 7.1 output summary for management partners/landowners ----
 # this is basically the same product as summary for observers, but output as .docx so we can edit before sending to parnter
 pmap(.l = list(file = here("code/render_partner_summary.Rmd"), zyear = zyear, zcode = 24, zcol.name = "SimmonsIs"), .f = render_summary_for_partner)
+
+
+
+
 
 
 

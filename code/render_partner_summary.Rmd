@@ -1,7 +1,7 @@
 ---
 title: ''
 output:
-  pdf_document: default
+  word_document:
 params:
   zyear: 2021
   zcode: 599
@@ -45,7 +45,7 @@ screened <- readRDS(here(paste("data/screened/screened_hep", zyear, sep = "_")))
 
 # input the colony code and species you want to generate an observer summary sheet for
 
-# zcode = 23
+# zcode = 91
 
 observers <- read.csv(here(paste("data/HEP_tracking_copy/observers_", zyear, ".csv", sep = ""))) %>% 
   filter(SITE.CODE == zcode)
@@ -66,9 +66,9 @@ include_graphics("ACR-logo2022-transparent.png")
 
 
 
-# Summary of nest monitoring at the `r site_name$site.name` heronry in `r zyear`  
+# Summary of nest monitoring at the `r site_name$site.name` heronry in `r zyear`: A report to XXXX  
 
-Below is a summary of heron and egret nest monitoring data from `r site_name$site.name` in `r zyear` and how they compare to previous years. These data are preliminary, and should not be considered a final report on activity at this nesting site. Observer review is an important part of our data quality control process--if you see something that is inconsistent with the data you collected, please contact us at cgrc@egret.org. 
+Each year, Audubon Canyon Ranch staff and volunteers monitor heron and egret nesting colonies throughout the northern San Francisco Bay Area. Below is a summary of heron and egret nest monitoring data from `r site_name$site.name` in `r zyear` and how they compare to previous years. These data are preliminary, and should not be considered a final report on activity at this nesting site. Observer review is an important part of our data quality control process--if you see something that is inconsistent with the data you collected, please contact us at cgrc@egret.org. 
 <br>  
 
 
@@ -384,8 +384,12 @@ if(max(historic_nest_abund$year, na.rm = TRUE) - min(historic_nest_abund$year, n
 }
 
 historic_nest_abund4plot %>%  
+  group_by(species) %>% 
+  mutate(mean.colsize = mean(peakactvnsts, na.rm = TRUE)) %>% 
+  ungroup() %>% 
   ggplot()  +
   geom_col(aes(x = year, y = peakactvnsts), color = "black") +
+  geom_hline(aes(yintercept = mean.colsize)) +
   xlim(min(zyears), max(zyears)) +
   scale_x_continuous(labels = zyears, 
                      breaks = zyears) +
@@ -434,7 +438,8 @@ phen_stages <- screened$stages %>%
   group_by(species) %>% 
   filter(date == min(date)) %>% 
   ungroup()
-      if(nrow(phen_stages) > 0) { # if there was stage data during the appropriate ROPs
+      
+if(nrow(phen_stages) > 0) { # if there was stage data during the appropriate ROPs
         # use it to calculate proportion unguarded
 zyear_phenology <- phen_stages %>% 
   mutate(stage = paste("phen.stage", stage, sep = "")) %>% 
@@ -800,10 +805,14 @@ if(max(historic_productivity4plot$year) - min(historic_productivity4plot$year) >
 }
 
 historic_productivity4plot %>%  
+  group_by(species) %>% 
+  mutate(mean.prod = mean(mean.chx.per.nest, na.rm = TRUE)) %>% 
+  ungroup() %>% 
   ggplot() + 
   theme_bw() +
   geom_errorbar(aes(x = year, ymax = mean.chx.per.nest + st.err.chx.per.nest, ymin = mean.chx.per.nest - st.err.chx.per.nest))  +
   geom_col(aes(x = year, y = mean.chx.per.nest), color = "black") + 
+  geom_hline(aes(yintercept = mean.prod)) +
   geom_text(data = filter(historic_productivity4plot, is.na(mean.chx.per.nest)), aes(x = year, y = lab.na), label = "X") +
   scale_x_continuous(labels = zyears, 
                      breaks = zyears) +

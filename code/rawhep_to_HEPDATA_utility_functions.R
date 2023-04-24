@@ -212,6 +212,29 @@ render_summary_for_observer <- function(file = here("code/observer_observer_summ
 }
 
 
+#' render_partner_summary
+#' 
+#' function to output observer summary sheet for a given year, colony and species. files must be .docx. .doc will not work without downloading LibreOffice software
+#'
+#' @param file 
+#' @param zyear 
+#' @param zcode 
+#' @param zcol.name 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+render_summary_for_partner <- function(file = here("code/observer_partner_summary.Rmd"), zyear, zcode, zcol.name) {
+  zcode.sub = gsub("\\.", "_", zcode)
+  rmarkdown::render(file, params = list(
+    zyear = zyear,
+    zcode = zcode
+  ), envir = new.env(),
+  output_file = here(paste0("summary_for_partners/", zcode.sub, "_", zyear, "_", zcol.name, ".docx", sep = ""))
+  )
+}
+
 
 
 #' disturbance_code_to_text

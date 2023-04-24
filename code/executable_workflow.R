@@ -32,6 +32,8 @@ library(birdnames)
 library(xlsx)
 
 
+
+
 # this file has helper functions used at multiple steps
 source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/main/code/rawhep_to_HEPDATA_utility_functions.R")
 # source(here("code/rawhep_to_HEPDATA_utility_functions.R"))
@@ -45,7 +47,8 @@ rop_dates = read.csv("data/support_data/rop_dates.csv")
 # OPTIONAL: view list of HEP sites and codes
 # source("https://raw.githubusercontent.com/scottfjennings/HEP_data_work/master/HEP_code/HEP_utility_functions.R")
 #obs_list <- hep_sites_from_access(here("C:/Users/scott.jennings/Documents/Projects/core_monitoring_research/HEP/HEP_data_work/HEP_data/HEPDATA.accdb"))
-
+# or the saves version:
+# sites <- readRDS(here("data/support_data/HEP_site_names_nums_utm"))
 
 
 
@@ -310,7 +313,7 @@ obs_list <- colony_vol_obs  %>%
 
 # obs_list <- obs_list %>% filter(code %in% c(160, 160.1, 181, 183, 184, 186))
 
-pmap(.l = list(file = here("code/render_observer_summary.Rmd"), zyear = zyear, zcode = 146, zcol.name = "WillotaDr"), .f = render_summary_for_observer)
+pmap(.l = list(file = here("code/render_observer_summary.Rmd"), zyear = zyear, zcode = 91, zcol.name = "JoiceIsSouth"), .f = render_summary_for_observer)
 
 render_list <- pmap(.l = list(file = here("code/render_observer_summary.Rmd"), zyear = obs_list$year, zcode = obs_list$code, zcol.name = obs_list$colony), .f = safely(render_summary_for_observer))
 
@@ -633,3 +636,12 @@ out_observers <- cgp_contacts %>%
   left_join(HEPDATA %>% distinct(CODE, DATAID))
 
 write.csv(out_observers, here(paste("data/as_HEPDATA/HEP_observers_", zyear, ".csv", sep = "")), row.names = FALSE)
+
+
+# 7 Extra tasks ----
+# 7.1 output summary for management partners/landowners ----
+# this is basically the same product as summary for observers, but output as .docx so we can edit before sending to parnter
+pmap(.l = list(file = here("code/render_partner_summary.Rmd"), zyear = zyear, zcode = 24, zcol.name = "SimmonsIs"), .f = render_summary_for_partner)
+
+
+

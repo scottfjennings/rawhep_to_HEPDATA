@@ -78,7 +78,7 @@ dates = front1_wrangled %>%
 # "total.hours"
 
 # number of columns to split ObsInitial into
-max.initials = max(str_count(front1_wrangled$ObsInitial, ','))
+max.initials = max(str_count(front1_wrangled$ObsInitial, ','), na.rm = TRUE)
 
 
 observers.effort = front1_wrangled %>% 

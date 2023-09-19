@@ -112,13 +112,13 @@ most_recent_nests <- nests_start %>%
 ```{r}
 
 ggplot(nests_start) +
-  geom_col(aes(x = date, y = total.nests, fill = species.name), stat="identity", width=1, position = "dodge") +
+  geom_col(aes(x = date, y = total.nests, fill = species.name), stat="identity", position = "dodge") +
   scale_fill_brewer(palette = "Set1") +
     scale_x_date(breaks = as.Date(distinct(nests_start, date)$date), date_labels = "%b %d") +
   theme_bw() +
   labs(y = "Total nests",
        x = "",
-       fill = "")
+       fill = "")+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 
 
 ```

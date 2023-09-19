@@ -33,7 +33,7 @@ disturbance = wrangled_s123$disturbance
 notes = wrangled_s123$notes
                      
                      
-if(!is.na(wrangled_alcatraz)) {
+if(any(!is.na(wrangled_alcatraz))) {
 dates = bind_rows(dates,
                   wrangled_alcatraz$dates)
 
@@ -59,7 +59,7 @@ notes = bind_rows(notes %>% filter(!(code == 70 & (species %in% c("BCNH", "SNEG"
                   wrangled_alcatraz$notes)
 }
 
-if(!is.na(wrangled_site_visits)) {
+if(any(!is.na(wrangled_site_visits))) {
 dates = bind_rows(dates,
                   wrangled_site_visits$dates)
 

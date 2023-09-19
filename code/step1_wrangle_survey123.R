@@ -396,16 +396,26 @@ disturbance <- disturbance_long %>%
          disturbance.obs = ifelse(grepl("any.details", name), "description", disturbance.obs)) %>% 
   mutate(disturbance.num = 1,
          disturbance.num = ifelse(grepl("second", name), 2, disturbance.num),
-         disturbance.num = ifelse(grepl("third", name), 3, disturbance.num))
+         disturbance.num = ifelse(grepl("third", name), 3, disturbance.num),
+         species = case_when(grepl("greg", name) ~ "GREG",
+                             grepl("gbhe", name) ~ "GBHE",
+                             grepl("sneg", name) ~ "SNEG",
+                             grepl("bcnh", name) ~ "BCNH",
+                             grepl("caeg", name) ~ "CAEG",
+                             grepl("dcco", name) ~ "DCCO"))
 
-disturbance_rewide <- disturbance %>% 
-  pivot_wider(id_cols = c(code, date, multiple.survey.num, disturbance.num), values_from = value, names_from = disturbance.obs) %>% 
+disturbance_rewide <- right_join(disturbance %>%
+                                  filter(!is.na(species)) %>% 
+                                  pivot_wider(id_cols = c(code, date, multiple.survey.num, disturbance.num, species), values_from = value, names_from = disturbance.obs),
+                                disturbance %>%
+                                  filter(is.na(species)) %>% 
+                                  pivot_wider(id_cols = c(code, date, multiple.survey.num, disturbance.num), values_from = value, names_from = disturbance.obs) %>% 
+                                  filter(see.signs == "yes")) %>% 
   mutate(code = as.numeric(code),
          date = as.Date(date)) %>% 
-  filter(see.signs == "yes") %>% 
-  select(-see.signs, -disturbance.num)%>% 
-  full_join(., distinct(birds, code, species), by = "code") %>% 
-  select(code, species, everything())
+#  select(-see.signs, -disturbance.num)%>% 
+  full_join(., distinct(birds, code, species)) %>% 
+  dplyr::select(code, species, everything())
  
 # notes ----
 # check notes fields for non-standard records

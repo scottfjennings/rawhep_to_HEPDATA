@@ -39,7 +39,7 @@ source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/ma
 # source(here("code/rawhep_to_HEPDATA_utility_functions.R"))
 
 # specify which year you are working with
-zyear = 2022
+zyear = 2023
 
 # read in file with ROP dates
 rop_dates = read.csv("data/support_data/rop_dates.csv")
@@ -61,11 +61,11 @@ source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/ma
 # source(here("code/step1_wrangle_survey123.R"))
 
 # set downloaded survey123 version
-zversion = "099"
+zversion = "019"
  
 # This step fixes field names and date fields, adds a helper column to indicate where multiple surveys happened on the same date, then finally splits the data into different "types" (e.g. total nest numbers, predator observations, etc.). These groups of "like" data are referred to as data groups. Each data group requires different procedures and manipulations downstream in the workflow.
 
- wrangled_s123 <- read.csv(here(paste("data/downloaded/HEP_", zyear, "_", zversion, ".csv", sep = ""))) %>%
+wrangled_s123 <- read.csv(here(paste("data/downloaded/", zyear, " Survey123 Backup/HEP_", zyear, "_", zversion, ".csv", sep = ""))) %>%
 #   mutate(complete.count = NA) %>% # OPTIONAL: only do this if wrangling 2020 data!!!
   mutate(useforsummary = tolower(useforsummary)) %>% 
   filter(useforsummary == "y") %>% # 
@@ -167,7 +167,9 @@ source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/ma
 # read data
 # this is a copy of the site_visit data copied to this directory. If you are working with access to the main version (i.e. S drive) then you can edit the path to point to that file
 # there is no risk of overwriting or changing that original file.
-hep_site_visits <- hep_site_visits_from_access("C:/Users/scott.jennings/OneDrive - Audubon Canyon Ranch/Projects/core_monitoring_research/HEP/HEP_screening_focal/HEP_site_visit_data.accdb")
+# hep_site_visits <- hep_site_visits_from_access("C:/Users/scott.jennings/OneDrive - Audubon Canyon Ranch/Projects/core_monitoring_research/HEP/HEP_screening_focal/HEP_site_visit_data.accdb")
+hep_site_visits <- hep_site_visits_from_access("V:/HEP_raw_data/HEP_site_visits/HEP_site_visit_data.accdb")
+
 # specify which colonies to wrangle
 col_codes = c(53, 53.1)
 # wrangle
@@ -641,7 +643,7 @@ write.csv(out_observers, here(paste("data/as_HEPDATA/HEP_observers_", zyear, ".c
 # 7 Extra tasks ----
 # 7.1 output summary for management partners/landowners ----
 # this is basically the same product as summary for observers, but output as .docx so we can edit before sending to parnter
-pmap(.l = list(file = here("code/render_partner_summary.Rmd"), zyear = zyear, zcode = 24, zcol.name = "SimmonsIs"), .f = render_summary_for_partner)
+pmap(.l = list(file = here("code/render_partner_summary.Rmd"), zyear = zyear, zcode = 53, zcol.name = "Bolinas"), .f = render_summary_for_partner)
 
 
 

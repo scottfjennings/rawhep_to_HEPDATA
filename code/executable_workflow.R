@@ -29,7 +29,7 @@ library(tidyverse)
 library(lubridate)
 library(here)
 library(birdnames)
-library(xlsx)
+#library(xlsx)
 
 
 
@@ -580,6 +580,9 @@ source("https://raw.githubusercontent.com/scottfjennings/Survey123_to_HEPDATA/ma
 # source(here("code/step6_screened_to_HEPDATA.R"))
 
 HEPDATA <- screened_to_HEPDATA(zyear) %>% 
+  arrange(CODE, SPECIES)
+
+HEPDATA <- wrangled_to_HEPDATA(zyear) %>% 
   arrange(CODE, SPECIES)
 
 

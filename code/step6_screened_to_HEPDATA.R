@@ -298,7 +298,7 @@ return(HEPDATA_out)
 #' @examples
 wrangled_to_HEPDATA <- function(zyear) {
   
-  wrangled_hep <- readRDS(here(paste("data/screened/wrangled_hep_", zyear, sep = "")))
+  wrangled_hep <- readRDS(here(paste("data/wrangled/wrangled_raw_", zyear, sep = "")))
   
   # 70.888 back to 70 for alcatraz colony code
   wrangled_hep <- map(wrangled_hep, fix_alc_code)
@@ -319,35 +319,22 @@ wrangled_to_HEPDATA <- function(zyear) {
   # 8   NUMBERVISITS
   # 9     TOTALHOURS
   
-  # this is the effort for all screened sheets. there should be a screened sheet for every surveyed colony
-  effort_screened <- wrangled_hep$observers.effort %>% 
-    right_join(screened_sheets) %>% 
-    select(CODE = code, SPECIES = species, NUMBERVISITS = total.surveys, TOTALHOURS = total.hours) 
+  # this is the effort for all surveyed colonies
+  effort <- wrangled_hep$observers.effort  %>% 
+    select(CODE = code, NUMBERVISITS = total.surveys, TOTALHOURS = total.hours) %>% 
+    right_join(surveyed_colonies_all_spp)
   
   
-  non_nester_col_spp <- anti_join(surveyed_colonies_all_spp, rename(screened_sheets, CODE = code, SPECIES = species)) 
-  
-  
-  non_nester_effort <- effort_screened %>%
-    group_by(CODE) %>% 
-    filter(NUMBERVISITS == max(NUMBERVISITS)) %>% 
-    distinct(CODE, NUMBERVISITS, TOTALHOURS)  %>% 
-    right_join(non_nester_col_spp) %>% 
-    arrange(CODE, SPECIES)
-  
-  effort <- full_join(effort_screened, non_nester_effort)
   
   # 10  PEAKACTVNSTS ----
   # this is all the colony X species combos that were really active
   # NOTE as of Feb 2023 PEAKACTVDATE is a new field for HEPDATA
-  peakactvnsts.gr0 <- wrangled_hep$nests %>% 
-    right_join(screened_sheets) %>%  
+  peakactvnsts.gr0 <- wrangled_hep$nests %>%  
     filter(peak.active == 1) %>% 
     select(CODE = code, SPECIES = species, PEAKACTVNSTS = total.nests, PEAKACTVDATE = date)
   
   # this is all the colony X species combos that were not actively nesting but for which the season summary sheet was screened.
-  peakactvnsts.0 <- wrangled_hep$nests %>% 
-    right_join(screened_sheets) %>% 
+  peakactvnsts.0 <- wrangled_hep$nests %>%
     group_by(code, species) %>% 
     summarise(peakactvnsts = sum(peak.active)) %>% 
     filter(peakactvnsts == 0) %>% 
@@ -369,13 +356,12 @@ wrangled_to_HEPDATA <- function(zyear) {
   
   # 16         NOTES ----
   spp_notes <- wrangled_hep$notes %>%  
-    right_join(screened_sheets) %>% 
     filter(note.type == "for.HEPDATA.species", notes != "", !is.na(notes)) %>% 
     select(CODE = code, SPECIES = species, NOTES.spp = notes) %>% 
-    distinct()
+    distinct() %>% 
+    right_join(surveyed_colonies_all_spp)
   
-  col_notes <- wrangled_hep$notes %>%  
-    right_join(screened_sheets) %>% 
+  col_notes <- wrangled_hep$notes %>% 
     filter(note.type == "for.HEPDATA.colony", notes != "", !is.na(notes)) %>% 
     select(CODE = code, NOTES.col = notes) %>% 
     distinct() %>% 
@@ -398,7 +384,6 @@ wrangled_to_HEPDATA <- function(zyear) {
   # stage 4 brood sizes ----
   # 17 BRD1; # 18 BRD2; # 19 BRD3; # 20 BRD4; # 21 BRD5; # 22 BRD6
   brood_sizes <- wrangled_hep$brood.sizes %>%  
-    right_join(screened_sheets) %>% 
     data.frame() %>% 
     filter(brd.size.date == TRUE) %>% 
     mutate(brd = paste("BRD", brd, sep = "")) %>% 
@@ -430,28 +415,38 @@ wrangled_to_HEPDATA <- function(zyear) {
   
   
   all_rop_stages <- wrangled_hep$stages %>%  
-    right_join(screened_sheets) %>% 
     filter(grepl("rop", which.rop)) %>% 
     mutate(stage = paste("STAGE", stage, sep = "")) %>% 
-    left_join(., rop_names)
+    left_join(., rop_names) %>% 
+    distinct()%>% 
+    mutate(rop.stage = paste(rop.name, stage, sep = "")) %>% 
+    arrange(code, date, species, multiple.survey.num, rop.stage)
   
   # stop test for multiple dates selected for the smae ROP
-  dup_rop <- all_rop_stages %>% 
-    mutate(rop.stage = paste(rop.name, stage, sep = "")) %>% 
+  dup_rop <- all_rop_stages  %>% 
     count(code, species, rop.stage, num.nests) %>% 
     filter(n > 1) %>% 
     mutate(out.message = paste(code, species, "\n"))
+   
   
   if(nrow(dup_rop) > 0) {
-    stop("multiple days selected for the same ROP for: \n", dup_rop$out.message, "\nPlease edit appropriate Season Summary Sheets")
+    warning("multiple days selected for the same ROP for: \n", dup_rop$out.message, "\nThe record with the most nests, or if tied the first of each of these, was selected to push forward to HEPDATA.")
   }
   
-  rop_nests <- all_rop_stages %>% 
-    mutate(rop.stage = paste(rop.name, stage, sep = "")) %>% 
+  
+  all_rop_stages_no_dups <- all_rop_stages %>% 
+    arrange(code, date, species, rop.stage, desc(num.nests)) %>% 
+    group_by(code, date, species, rop.stage) %>% 
+    mutate(dup.num = row_number(),
+           max.nests = max(num.nests)) %>% 
+    ungroup() %>% 
+    filter(dup.num == 1 & num.nests == max.nests)
+  
+  rop_nests <- all_rop_stages_no_dups %>% 
     select(code, species, rop.stage, num.nests) %>% 
     pivot_wider(id_cols = c("code", "species"), names_from = rop.stage, values_from = num.nests)
   
-  rop_dates <- all_rop_stages %>% 
+  rop_dates <- all_rop_stages_no_dups %>% 
     select(code, species, date, rop.date.name) %>% 
     distinct() %>% 
     pivot_wider(id_cols = c("code", "species"), names_from = rop.date.name, values_from = date)
@@ -475,8 +470,7 @@ wrangled_to_HEPDATA <- function(zyear) {
   # disturbances ----
   # 65 DIST1DATE; # 66 DIST1TYPE; # 67 DIST1RESULT; # 68 DIST2DATE; # 69 DIST2TYPE; # 70 DIST2RESULT; # 71 DIST3DATE; # 72 DIST3TYPE; # 73 DIST3RESULT; # 74 DIST4DATE; # 75 DIST4TYPE; # 76 DIST4RESULT; # 77 DIST5DATE; # 78 DIST5TYPE; # 79 DIST5RESULT; # 80 DIST6DATE; # 81 DIST6TYPE; # 82 DIST6RESULT; # 83; DIST7DATE; # 84 DIST7TYPE; # 85 DIST7RESULT; # 86 DIST8DATE; # 87 DIST8TYPE; # 88 DIST8RESULT; # 89 DIST9DATE; # 90 DIST9TYPE; # 91 DIST9RESULT
   
-  disturbance <- wrangled_hep$disturbance %>%  
-    right_join(screened_sheets) %>% 
+  disturbance <- wrangled_hep$disturbance %>% 
     mutate(result = tolower(result)) %>% 
     filter(!grepl("x", type), !grepl("x", result)) %>% 
     group_by(code, species) %>% 
@@ -487,15 +481,11 @@ wrangled_to_HEPDATA <- function(zyear) {
     rename("CODE" = code,
            "SPECIES" = species)
   
-  non_nesters_disturbance <- disturbance %>% 
-    filter(copy.to.non.nesters == "yes") %>% 
-    select(-SPECIES, -result) %>% 
-    left_join(surveyed_colonies_all_spp)
-  
   disturbance_long <- disturbance %>% 
-    full_join(non_nesters_disturbance) %>% 
+    #full_join(non_nesters_disturbance) %>% 
+    mutate(date = as.character(date)) %>% 
     select(CODE, SPECIES, date, type, result, dist.num) %>% 
-    pivot_longer(cols = c(date, type, result)) %>% 
+    pivot_longer(cols = c("date", "type", "result")) %>% 
     mutate(name = toupper(name),
            outname = paste("DIST", dist.num, name, sep = ""))
   
@@ -517,8 +507,7 @@ wrangled_to_HEPDATA <- function(zyear) {
   # 97  TUVUROOSTING
   
   nesting_predators <- wrangled_hep$predators %>%  
-    right_join(screened_sheets) %>% 
-    filter((nesting == 1 | tolower(copy.to.non.nesters) == "yes"), predator.species %in% c("GHOW", "RTHA", "OSPR", "CORA", "BAEA", "TUVU")) %>% 
+    filter(nesting == 1, predator.species %in% c("GHOW", "RTHA", "OSPR", "CORA", "BAEA", "TUVU")) %>% 
     mutate(predator = ifelse(predator.species == "TUVU", 
                              paste(toupper(predator.species), "ROOSTING", sep = ""),
                              paste(toupper(predator.species), "NESTING", sep = ""))) %>% 
@@ -528,6 +517,7 @@ wrangled_to_HEPDATA <- function(zyear) {
     arrange(CODE, SPECIES)
   
   predators <- nesting_predators %>% 
+    filter(!is.na(predator)) %>% 
     pivot_wider(id_cols = c(CODE, SPECIES), names_from = predator, values_from = nesting) %>% 
     arrange(CODE, SPECIES)
   

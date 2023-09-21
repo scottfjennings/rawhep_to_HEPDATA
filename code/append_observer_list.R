@@ -1,6 +1,6 @@
 
 library(tidyverse)
-library(xlsx)
+library(readxl)
 library(here)
 
 
@@ -11,11 +11,11 @@ library(here)
 #' @return saves csv to data/HEP_tracking_copy
 #'
 #' @examples
-#' append_observer_list("2020")
+#' append_observer_list("2023")
 append_observer_list <- function(zyear) {
-observers <- read.xlsx(here("data/HEP_tracking_copy/HEP Tracking Spreadsheet2_shared.xlsx"), sheetName = zyear) %>% 
+observers <- read_excel(here("data/HEP_tracking_copy/HEP Tracking Spreadsheet2_shared.xlsx"), sheet = zyear, .name_repair = function(col){ gsub(" ", ".", col) }) %>% 
   filter(!is.na(SITE.CODE)) %>% 
-  select(SITE.CODE, SITE.NAME, LAST.NAME, FIRST.NAME, Coordinator.) %>% 
+  select(SITE.CODE, SITE.NAME, LAST.NAME, FIRST.NAME, "Coordinator?") %>% 
   mutate(year = as.numeric(zyear))
 
 if(file.exists(here("data/HEP_tracking_copy/observers.csv"))) {

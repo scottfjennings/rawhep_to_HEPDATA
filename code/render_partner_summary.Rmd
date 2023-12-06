@@ -26,7 +26,7 @@ library(officer)
 library(here)
 library(knitr)
 library(birdnames)
-library(xlsx)
+library(readxl)
 
 source("https://raw.githubusercontent.com/scottfjennings/rawhep_to_HEPDATA/main/code/append_species_not_nesting.R")
 # source(here("code/append_species_not_nesting.R"))
@@ -40,15 +40,17 @@ options(scipen = 999)
 
 ```{r}
 # input the year you are working with and read in the wrangled Survey123 data
-# zyear = 2022
-screened <- readRDS(here(paste("data/screened/screened_hep", zyear, sep = "_")))
+# zyear = 2023
+# screened <- readRDS(here(paste("data/screened/screened_hep", zyear, sep = "_")))
+screened <- readRDS(here(paste("data/wrangled/wrangled_raw", zyear, sep = "_")))
 
 # input the colony code and species you want to generate an observer summary sheet for
 
-# zcode = 91
+# zcode = 31.1
 
-observers <- read.csv(here(paste("data/HEP_tracking_copy/observers_", zyear, ".csv", sep = ""))) %>% 
-  filter(SITE.CODE == zcode)
+observers <- read.csv(here(paste("data/HEP_tracking_copy/observers.csv", sep = ""))) %>% 
+  filter(SITE.CODE == zcode) %>% 
+  mutate(observer.name = paste(FIRST.NAME, LAST.NAME))
 
 
 
@@ -80,8 +82,7 @@ Each year, Audubon Canyon Ranch staff and volunteers monitor heron and egret nes
 seas_summary_observers <- screened$observers %>% 
   filter(code == zcode) %>% 
   mutate(observers = gsub("\\*", "", observers)) %>% 
-  select(-species) %>% 
-  distinct()
+  distinct(code, colony, observers, total.days, total.surveys, total.hours)
 
 
 out_length <- length(str_split(seas_summary_observers$observers,"\\;")[[1]])

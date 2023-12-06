@@ -13,9 +13,9 @@ library(here)
 #' @examples
 #' append_observer_list("2023")
 append_observer_list <- function(zyear) {
-observers <- read_excel(here("data/HEP_tracking_copy/HEP Tracking Spreadsheet2_shared.xlsx"), sheet = zyear, .name_repair = function(col){ gsub(" ", ".", col) }) %>% 
+observers <- read_excel(here("data/HEP_tracking_copy/HEP Tracking Spreadsheet2_shared.xlsx"), sheet = zyear, .name_repair = function(col){ gsub(" |\\?", ".", col) }) %>% 
   filter(!is.na(SITE.CODE)) %>% 
-  select(SITE.CODE, SITE.NAME, LAST.NAME, FIRST.NAME, "Coordinator?") %>% 
+  select(SITE.CODE, SITE.NAME, LAST.NAME, FIRST.NAME, Coordinator.) %>% 
   mutate(year = as.numeric(zyear))
 
 if(file.exists(here("data/HEP_tracking_copy/observers.csv"))) {
@@ -29,4 +29,4 @@ if(file.exists(here("data/HEP_tracking_copy/observers.csv"))) {
 }
 
 
-
+append_observer_list("2023")

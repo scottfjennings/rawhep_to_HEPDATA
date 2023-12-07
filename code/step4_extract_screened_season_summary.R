@@ -179,7 +179,7 @@ if(grepl("GREG|GBHE", zfile)){
 nbrood.cols = ncol(stage4brd) - 5
   
   # if species == GBHE or GREG but no stage 4 info, return null
-  if(nrow(stage4brd) == 1 & (stage4brd$brd.size.date == "NA" | stage4brd$brd.size.date == "")) {
+  if(nrow(stage4brd) == 1 & any(stage4brd$brd.size.date == "NA" | stage4brd$brd.size.date == "")) {
     stage4brd = NULL
   } else { # else pivot the stage info back to long format
   stage4brd <- stage4brd %>% 

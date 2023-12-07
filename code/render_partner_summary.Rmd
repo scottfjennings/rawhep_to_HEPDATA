@@ -744,7 +744,7 @@ nbrood_rows <- brood_sizes %>%
   ungroup() %>% 
   mutate(nbrood.rows = cumsum(nbrood.rows))
 
-if(any(spp.nesting %in% c("GREG", "GBHE")) & nrow(brood_sizes) > 0 & !is.na(brood_sizes_wide$species)) {
+if(any(spp.nesting %in% c("GREG", "GBHE")) & nrow(brood_sizes) > 0 & any(!is.na(brood_sizes_wide$species))) {
 flextable(brood_sizes_wide) %>% 
     set_header_labels(species = "Species",
                       date = "Date",
